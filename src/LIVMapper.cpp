@@ -379,7 +379,19 @@ void LIVMapper::handleVIO()
     vio_manager->plot_flag = false;
   }
 
+  auto img_received_time = LidarMeasures.measures.back().img_received_time;
+  auto t_vio_start = std::chrono::steady_clock::now();
   vio_manager->processFrame(LidarMeasures.measures.back().img, _pv_list, voxelmap_manager->voxel_map_, LidarMeasures.last_lio_update_time - _first_lidar_time);
+  auto t_vio_end = std::chrono::steady_clock::now();
+
+  const double arrival_to_vio_start_ms = std::chrono::duration<double, std::milli>(t_vio_start - img_received_time).count();
+  const double arrival_to_vio_end_ms = std::chrono::duration<double, std::milli>(t_vio_end - img_received_time).count();
+  const double vio_proc_time_ms = std::chrono::duration<double, std::milli>(t_vio_end - t_vio_start).count();
+  RCLCPP_INFO(this->node->get_logger(),
+              "[Image latency] arrival->VIO start: %.3f ms, VIO process: %.3f ms, arrival->VIO end: %.3f ms",
+              arrival_to_vio_start_ms,
+              vio_proc_time_ms,
+              arrival_to_vio_end_ms);
 
   if (imu_prop_enable) 
   {
@@ -934,6 +946,7 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in)
   cv::Mat img_cur = getImageFromMsg(msg);
   img_buffer.push_back(img_cur);
   img_time_buffer.push_back(img_time_correct);
+  img_received_time_buffer.push_back(std::chrono::steady_clock::now());
 
   // ROS_INFO("Correct Image time: %.6f", img_time_correct);
 
@@ -1030,6 +1043,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
       {
         img_buffer.pop_front();
         img_time_buffer.pop_front();
+        if (!img_received_time_buffer.empty()) img_received_time_buffer.pop_front();
         RCLCPP_ERROR(this->node->get_logger(), "[ Data Cut ] Throw one image frame! \n");
         return false;
       }
@@ -1118,6 +1132,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
       m.vio_time = img_capture_time;
       m.lio_time = meas.last_lio_update_time;
       m.img = img_buffer.front();
+      m.img_received_time = img_received_time_buffer.front();
       mtx_buffer.lock();
       // while ((!imu_buffer.empty() && (imu_time < img_capture_time)))
       // {
@@ -1130,6 +1145,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
       // }
       img_buffer.pop_front();
       img_time_buffer.pop_front();
+      if (!img_received_time_buffer.empty()) img_received_time_buffer.pop_front();
       mtx_buffer.unlock();
       sig_buffer.notify_all();
       meas.measures.push_back(m);

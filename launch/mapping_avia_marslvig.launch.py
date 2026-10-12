@@ -16,15 +16,15 @@ def generate_launch_description():
     rviz_config_file = os.path.join(get_package_share_directory("fast_livo"), "rviz_cfg", "M300.rviz")
 
     #Load parameters
-    avia_config_cmd = os.path.join(config_file_dir, "MARS_LVIG.yaml")
-    camera_config_cmd = os.path.join(config_file_dir, "camera_MARS_LVIG.yaml")
-
+    avia_config_cmd = os.path.join(config_file_dir, "MARS_LVIG.yaml")#=checked=#
+    camera_config_cmd = os.path.join(config_file_dir, "camera_MARS_LVIG.yaml")#=checked=#
+    
     # Param use_rviz
     use_rviz_arg = DeclareLaunchArgument(
         "use_rviz",
-        default_value="False",
+        default_value="true",
         description="Whether to launch Rviz2",
-    )
+    ) 
 
     avia_config_arg = DeclareLaunchArgument(
         'avia_params_file',
@@ -69,21 +69,21 @@ def generate_launch_description():
         # republish compressed image to raw image
         # https://robotics.stackexchange.com/questions/110939/how-do-i-remap-compressed-video-to-raw-video-in-ros2
         # ros2 run image_transport republish compressed raw --ros-args --remap in:=/left_camera/image --remap out:=/left_camera/image
-        Node(
-            package="image_transport",
-            executable="republish",
-            name="republish",
-            arguments=[ # Array of strings/parametric arguments that will end up in process's argv
-                'compressed', 
-                'raw',
-            ],
-            remappings=[
-                ("in",  "/left_camera/image"), 
-                ("out", "/left_camera/image")
-            ],
-            output="screen",
-            respawn=use_respawn,
-        ),
+        # Node(
+        #     package="image_transport",
+        #     executable="republish",
+        #     name="republish",
+        #     arguments=[ # Array of strings/parametric arguments that will end up in process's argv
+        #         'compressed', 
+        #         'raw',
+        #     ],
+        #     remappings=[
+        #         ("in",  "/left_camera/image/compressed"), 
+        #         ("out", "/left_camera/image/raw")
+        #     ],
+        #     output="screen",
+        #     respawn=use_respawn,
+        # ),
         
         Node(
             package="fast_livo",
@@ -91,6 +91,7 @@ def generate_launch_description():
             name="laserMapping",
             parameters=[
                 avia_params_file,
+                camera_params_file,
             ],
             # https://docs.ros.org/en/humble/How-To-Guides/Getting-Backtraces-in-ROS-2.html
             prefix=[

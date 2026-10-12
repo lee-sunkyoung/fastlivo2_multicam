@@ -1,0 +1,57 @@
+/**:
+  ros__parameters:
+    camera1: # left front
+      model: Pinhole
+      width: 2448
+      height: 2048
+      scale: 0.25
+      fx: 1453.88
+      fy: 1452.85
+      cx: 1182.53
+      cy: 1045.82
+      d0: -0.052
+      d1: 0.1168
+      d2: 0.0015
+      d3: 0.00013
+
+    camera2: # right front
+      model: Pinhole
+      width: 2448
+      height: 2048
+      scale: 0.25
+      fx: 1453.88
+      fy: 1452.85
+      cx: 1182.53
+      cy: 1045.82
+      d0: -0.052
+      d1: 0.1168
+      d2: 0.0015
+      d3: 0.00013
+
+    camera3: # left back
+      model: Pinhole
+      width: 2448
+      height: 2048
+      scale: 0.25
+      fx: 1453.88
+      fy: 1452.85
+      cx: 1182.53
+      cy: 1045.82
+      d0: -0.052
+      d1: 0.1168
+      d2: 0.0015
+      d3: 0.00013
+
+    camera4: # right back
+      model: Pinhole
+      width: 2448
+      height: 2048
+      scale: 0.25
+      fx: 1453.88
+      fy: 1452.85
+      cx: 1182.53
+      cy: 1045.82
+      d0: -0.052
+      d1: 0.1168
+      d2: 0.0015
+      d3: 0.00013

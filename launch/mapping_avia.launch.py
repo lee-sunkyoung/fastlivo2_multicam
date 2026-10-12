@@ -59,25 +59,37 @@ def generate_launch_description():
         #     cmd=[['ros2 bag play ', '~/datasets/Retail_Street ', '--clock ', "-l"]], 
         #     shell=True
         # ),
+     
+        # # use parameter_blackboard as global parameters server and load camera params
+        # Node(
+        #     package='demo_nodes_cpp',
+        #     executable='parameter_blackboard',
+        #     name='parameter_blackboard',
+        #     # namespace='laserMapping',
+        #     parameters=[
+        #         camera_params_file,
+        #     ],
+        #     output='screen'
+        # ),
 
         # republish compressed image to raw image
         # https://robotics.stackexchange.com/questions/110939/how-do-i-remap-compressed-video-to-raw-video-in-ros2
         # ros2 run image_transport republish compressed raw --ros-args --remap in:=/left_camera/image --remap out:=/left_camera/image
-        Node(
-            package="image_transport",
-            executable="republish",
-            name="republish",
-            arguments=[ # Array of strings/parametric arguments that will end up in process's argv
-                'compressed', 
-                'raw',
-            ],
-            remappings=[
-                ("in",  "/left_camera/image"), 
-                ("out", "/left_camera/image")
-            ],
-            output="screen",
-            respawn=use_respawn,
-        ),
+        # Node(
+        #     package="image_transport",
+        #     executable="republish",
+        #     name="republish",
+        #     arguments=[ # Array of strings/parametric arguments that will end up in process's argv
+        #         'compressed', 
+        #         'raw',
+        #     ],
+        #     remappings=[
+        #         ("in",  "/left_camera/image"), 
+        #         ("out", "/left_camera/image")
+        #     ],
+        #     output="screen",
+        #     respawn=use_respawn,
+        # ),
         
         Node(
             package="fast_livo",

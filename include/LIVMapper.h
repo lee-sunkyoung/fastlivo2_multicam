@@ -68,6 +68,23 @@ public:
   template <typename T> Eigen::Matrix<T, 3, 1> pointBodyToWorld(const Eigen::Matrix<T, 3, 1> &pi);
   cv::Mat getImageFromMsg(const sensor_msgs::msg::Image::ConstSharedPtr &img_msg);
 
+
+    /// add 
+  struct CameraConfig
+  {
+    std::string img_topic;
+    std::string calib_ns;
+    Eigen::Vector3d Pcl;
+    Eigen::Matrix3d Rcl;
+    Eigen::Vector3d extrinsic_T;
+    Eigen::Matrix3d extrinsic_R;
+  };
+
+  std::vector<CameraConfig> camera_configs;
+  std::vector<rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr> img_subs;
+  /// add
+
+  
   std::mutex mtx_buffer, mtx_buffer_imu_prop;
   std::condition_variable sig_buffer;
 
@@ -128,6 +145,7 @@ public:
   deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu_buffer;
   deque<cv::Mat> img_buffer;
   deque<double> img_time_buffer;
+  deque<std::chrono::steady_clock::time_point> img_received_time_buffer;
   vector<pointWithVar> _pv_list;
   vector<double> extrinT;
   vector<double> extrinR;

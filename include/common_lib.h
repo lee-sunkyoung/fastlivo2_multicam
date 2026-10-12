@@ -13,6 +13,7 @@ which is included as part of this source code package.
 #ifndef COMMON_LIB_H
 #define COMMON_LIB_H
 
+#include <chrono>
 #include <utils/so3_math.h>
 #include <utils/types.h>
 #include <utils/color.h>
@@ -65,12 +66,14 @@ struct MeasureGroup
 {
   double vio_time;
   double lio_time;
+  std::chrono::steady_clock::time_point img_received_time;
   deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu;
   cv::Mat img;
   MeasureGroup()
   {
     vio_time = 0.0;
     lio_time = 0.0;
+    img_received_time = std::chrono::steady_clock::time_point{};
   };
 };
 
