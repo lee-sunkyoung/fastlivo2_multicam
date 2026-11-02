@@ -64,6 +64,7 @@ enum EKF_STATE
 
 struct MeasureGroup
 {
+  int cam_idx;
   double vio_time;
   double lio_time;
   std::chrono::steady_clock::time_point img_received_time;
@@ -71,6 +72,7 @@ struct MeasureGroup
   cv::Mat img;
   MeasureGroup()
   {
+    cam_idx = -1;
     vio_time = 0.0;
     lio_time = 0.0;
     img_received_time = std::chrono::steady_clock::time_point{};

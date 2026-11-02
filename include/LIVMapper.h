@@ -54,7 +54,7 @@ public:
   void standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
   void livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg_in);
   void imu_cbk(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in);
-  void img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in);
+  void img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in, int cam_idx);
   void publish_img_rgb(const image_transport::Publisher &pubImage, VIOManagerPtr vio_manager);
   void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudFullRes, VIOManagerPtr vio_manager);
   void publish_visual_sub_map(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubSubVisualMap);
@@ -69,20 +69,59 @@ public:
   cv::Mat getImageFromMsg(const sensor_msgs::msg::Image::ConstSharedPtr &img_msg);
 
 
-    /// add 
-  struct CameraConfig
+  struct CameraRuntime
   {
     std::string img_topic;
     std::string calib_ns;
-    Eigen::Vector3d Pcl;
-    Eigen::Matrix3d Rcl;
-    Eigen::Vector3d extrinsic_T;
-    Eigen::Matrix3d extrinsic_R;
+    double time_offset = 0.0;
+    std::vector<double> Rcl;
+    std::vector<double> Pcl;
   };
 
-  std::vector<CameraConfig> camera_configs;
+  int camera_count = 1;
+  std::vector<CameraRuntime> camera_runtimes;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr> img_subs;
-  /// add
+
+  struct CameraImageEntry
+  {
+    sensor_msgs::msg::Image::ConstSharedPtr msg;
+    double capture_time = 0.0;
+    std::chrono::steady_clock::time_point received_time;
+  };
+
+  struct CameraQueueState
+  {
+    std::deque<CameraImageEntry> queue;
+    double last_timestamp_img = -1.0;
+    uint64_t dropped_overflow = 0;
+    uint64_t dropped_old = 0;
+    uint64_t dropped_stale = 0;
+    uint64_t dropped_convert_fail = 0;
+    uint64_t use_count = 0;
+  };
+
+  struct PendingSelection
+  {
+    bool valid = false;
+    int cam_idx = -1;
+    double capture_time = 0.0;
+    double synced_capture_time = 0.0;
+    std::chrono::steady_clock::time_point received_time;
+    sensor_msgs::msg::Image::ConstSharedPtr msg;
+    cv_bridge::CvImageConstPtr cv_ptr;
+  };
+
+  int camera_queue_max = 3;
+  bool single_vio_manager_mode = true;
+  bool exposure_warned_once = false;
+  int last_selected_cam_idx = -1;
+  int last_vio_cam_idx = 0;
+  double last_selected_synced_capture_time = -1.0;
+  std::vector<bool> round_done;
+  std::vector<bool> camera_selectable;
+  std::vector<bool> first_image_size_checked;
+  std::vector<CameraQueueState> camera_queue_states;
+  PendingSelection pending_selection;
 
   
   std::mutex mtx_buffer, mtx_buffer_imu_prop;
@@ -180,6 +219,7 @@ public:
   PreprocessPtr p_pre;
   ImuProcessPtr p_imu;
   VoxelMapManagerPtr voxelmap_manager;
+  std::vector<VIOManagerPtr> vio_managers;
   VIOManagerPtr vio_manager;
 
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr plane_pub;
