@@ -306,7 +306,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
     }
   }
 
-  // count all valuable cams, initialize cam state buffer, 
+  // count all valuable cams
   camera_count = static_cast<int>(camera_runtimes.size());
 
   // existing vio code reads these legacy single-cam members directly , 
