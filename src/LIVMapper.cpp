@@ -317,7 +317,18 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   }
 
   camera_queue_states.assign(camera_count, CameraQueueState{});
+  // Initialize camera selection states for round-based scheduling.
+  round_done.assign(camera_count, false);
+  camera_selectable.assign(camera_count, true);
   first_image_size_checked.assign(camera_count, false);
+
+  // just this step - Disable other cameras until per-camera VIO managers are available.
+  single_vio_manager_mode = true;
+
+  if (single_vio_manager_mode && camera_count > 1)
+  {
+    for (int i = 1; i < camera_count; ++i) camera_selectable[i] = false;
+  }
 
   // existing vio code reads these legacy single-cam members directly , 
   // so copy camera_1 into them to avoid changing the rest of the code.
@@ -1164,7 +1175,7 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
   sig_buffer.notify_all();
 }
 
-// Temporarily use only camera 0 until multi-camera synchronization is implemented.
+
 bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 {
   if (lid_raw_data_buffer.empty() && lidar_en) return false;
@@ -1172,10 +1183,21 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 
   if (slam_mode_ == LIVO && img_en)
   {
-    std::lock_guard<std::mutex> lock(mtx_buffer);
-    if (camera_queue_states.empty() ||
-        camera_queue_states[0].queue.empty())
-      return false;
+    bool any_image = false;
+    mtx_buffer.lock();
+    // Allow VIO to use an image already selected during LIO.
+    if (meas.lio_vio_flg == LIO && pending_selection.valid){any_image = true;}
+    else
+    {
+      // Check image availability across selectable cameras.
+      for (int i = 0; i < camera_count; ++i)
+      {
+        if (i < static_cast<int>(camera_selectable.size()) && !camera_selectable[i]) continue;
+        if (!camera_queue_states[i].queue.empty()) { any_image = true; break; }
+      }
+    }
+    mtx_buffer.unlock();
+    if (!any_image) return false; 
   }
 
   switch (slam_mode_)
@@ -1186,25 +1208,18 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
     if (!lidar_pushed)
     {
       // If not push the lidar into measurement data buffer
-      meas.lidar = lid_raw_data_buffer.front(); // push the first lidar topic
+      meas.lidar = lid_raw_data_buffer.front();
       if (meas.lidar->points.size() <= 1) return false;
 
-      meas.lidar_frame_beg_time = lid_header_time_buffer.front();                                                // generate lidar_frame_beg_time
+      meas.lidar_frame_beg_time = lid_header_time_buffer.front();
       meas.lidar_frame_end_time = meas.lidar_frame_beg_time + meas.lidar->points.back().curvature / double(1000); // calc lidar scan end time
       meas.pcl_proc_cur = meas.lidar;
       lidar_pushed = true;                                                                                       // flag
     }
 
-    if (imu_en && last_timestamp_imu < meas.lidar_frame_end_time)
-    { // waiting imu message needs to be
-      // larger than _lidar_frame_end_time,
-      // make sure complete propagate.
-      // ROS_ERROR("out sync");
-      return false;
-    }
+    if (imu_en && last_timestamp_imu < meas.lidar_frame_end_time){return false;}
 
-    struct MeasureGroup m; // standard method to keep imu message.
-
+    struct MeasureGroup m;
     m.imu.clear();
     m.lio_time = meas.lidar_frame_end_time;
     mtx_buffer.lock();
@@ -1219,93 +1234,211 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
     mtx_buffer.unlock();
     sig_buffer.notify_all();
 
-    meas.lio_vio_flg = LIO; // process lidar topic, so timestamp should be lidar scan end.
+    meas.lio_vio_flg = LIO;
     meas.measures.push_back(m);
-    // ROS_INFO("ONlY HAS LiDAR and IMU, NO IMAGE!");
-    lidar_pushed = false; // sync one whole lidar scan.
-    return true;
+    lidar_pushed = false;
 
-    break;
+    return true;
   }
 
   case LIVO:
   {
+    // Process LIO before VIO at the selected image timestamp.
     /*** For LIVO mode, the time of LIO update is set to be the same as VIO, LIO
      * first than VIO imediatly ***/
     EKF_STATE last_lio_vio_flg = meas.lio_vio_flg;
-    // double t0 = omp_get_wtime();
     switch (last_lio_vio_flg)
     {
-    // double img_capture_time = meas.lidar_frame_beg_time + exposure_time_init;
     case WAIT:
     case VIO:
     {
-      // printf("!!! meas.lio_vio_flg: %d \n", meas.lio_vio_flg);
-      double img_capture_time;
-      {
-        std::lock_guard<std::mutex> lock(mtx_buffer);
-
-        if (camera_queue_states[0].queue.empty())
-          return false;
-
-        img_capture_time =
-            camera_queue_states[0].queue.front().capture_time
-            + exposure_time_init;
-      }
-      /*** has img topic, but img topic timestamp larger than lidar end time,
-       * process lidar topic. After LIO update, the meas.lidar_frame_end_time
-       * will be refresh. ***/
       if (meas.last_lio_update_time < 0.0) meas.last_lio_update_time = lid_header_time_buffer.front();
-      // printf("[ Data Cut ] wait \n");
-      // printf("[ Data Cut ] last_lio_update_time: %lf \n",
-      // meas.last_lio_update_time);
+      const double lid_newest_time = lid_header_time_buffer.back() + lid_raw_data_buffer.back()->points.back().curvature / double(1000);
+      const double imu_newest_time = stamp2Sec(imu_buffer.back()->header.stamp);
+      // Use the common LiDAR-IMU synchronization horizon.
+      const double horizon_time = std::min(lid_newest_time, imu_newest_time);
+      const double stale_eps = 1e-5;
+      std::vector<int> fail_empty(camera_count, 0);
+      std::vector<int> fail_horizon_not_ready(camera_count, 0);
+      std::vector<int> fail_stale_dropped(camera_count, 0);
 
-      double lid_newest_time = lid_header_time_buffer.back() + lid_raw_data_buffer.back()->points.back().curvature / double(1000);
-      double imu_newest_time = stamp2Sec(imu_buffer.back()->header.stamp);
-
-
-      if (img_capture_time < meas.last_lio_update_time + 0.00001)
+      // Prefer the next camera when timestamps are equal.
+      auto cam_distance_from_preferred = [&](int cam_idx)
       {
-        std::lock_guard<std::mutex> lock(mtx_buffer);
-        auto &state = camera_queue_states[0];
+        if (camera_count <= 0) return 0;
+        const int preferred = (last_selected_cam_idx < 0) ? 0 : ((last_selected_cam_idx + 1) % camera_count);
+        return (cam_idx - preferred + camera_count) % camera_count;
+      };
 
-        if (!state.queue.empty() &&
-            state.queue.front().capture_time + exposure_time_init
-                < meas.last_lio_update_time + 0.00001)
+      // Build per-camera queue and drop statistics.
+      auto build_queue_stats = [&]()
+      {
+        std::ostringstream oss;
+        for (int i = 0; i < camera_count; ++i)
         {
-          state.queue.pop_front();
-          state.dropped_stale++;
+          const auto &st = camera_queue_states[i];
+          oss << " cam=" << i
+              << " q=" << st.queue.size()
+              << " use=" << st.use_count
+              << " drop{ovf=" << st.dropped_overflow
+              << ",old=" << st.dropped_old
+              << ",stale=" << st.dropped_stale
+              << ",cv=" << st.dropped_convert_fail << "}";
+        }
+        return oss.str();
+      };
+
+      bool selected = false;
+      double selected_dt = -1.0;
+
+      // Retry selection after resetting the camera round once.
+      for (int reset_try = 0; reset_try < 2 && !selected; ++reset_try)
+      {
+        while (!selected)
+        {
+          int best_cam = -1;
+          int best_idx = -1;
+          double best_synced_capture_time = std::numeric_limits<double>::infinity();
+
+          mtx_buffer.lock();
+          for (int cam = 0; cam < camera_count; ++cam)
+          {
+            if (cam >= static_cast<int>(camera_selectable.size()) || !camera_selectable[cam]) continue;
+            if (cam < static_cast<int>(round_done.size()) && round_done[cam]) continue;
+            auto &cam_state = camera_queue_states[cam];
+            if (cam_state.queue.empty())
+            {
+              fail_empty[cam]++;
+              continue;
+            }
+
+            // Find the newest frame within the synchronization horizon.
+            int latest_ready_idx = -1;
+            for (int i = static_cast<int>(cam_state.queue.size()) - 1; i >= 0; --i)
+            {
+              const double synced_capture_time = cam_state.queue[i].capture_time + exposure_time_init;
+              if (synced_capture_time <= horizon_time)
+              {
+                latest_ready_idx = i;
+                break;
+              }
+            }
+            if (latest_ready_idx < 0)
+            {
+              fail_horizon_not_ready[cam]++;
+              continue;
+            }
+
+            const double synced_capture_time = cam_state.queue[latest_ready_idx].capture_time + exposure_time_init;
+            // Discard frames older than the last LIO update.
+            if (synced_capture_time <= meas.last_lio_update_time + stale_eps)
+            {
+              const int stale_drop_num = latest_ready_idx + 1;
+              cam_state.queue.erase(cam_state.queue.begin(), cam_state.queue.begin() + stale_drop_num);
+              cam_state.dropped_stale += stale_drop_num;
+              fail_stale_dropped[cam] += stale_drop_num;
+              continue;
+            }
+            // Select the earliest ready timestamp across cameras.
+            bool better = false;
+            if (best_cam < 0) better = true;
+            else if (synced_capture_time < best_synced_capture_time - stale_eps) better = true;
+            else if (std::abs(synced_capture_time - best_synced_capture_time) <= stale_eps)
+            {
+              better = cam_distance_from_preferred(cam) < cam_distance_from_preferred(best_cam);
+            }
+
+            if (better)
+            {
+              best_cam = cam;
+              best_idx = latest_ready_idx;
+              best_synced_capture_time = synced_capture_time;
+            }
+          }
+
+          if (best_cam < 0){ mtx_buffer.unlock(); break;}
+
+          auto &best_state = camera_queue_states[best_cam];
+          CameraImageEntry selected_entry = best_state.queue[best_idx];
+          const int old_drop_num = best_idx;
+          best_state.queue.erase(best_state.queue.begin(), best_state.queue.begin() + best_idx + 1);
+          best_state.dropped_old += old_drop_num;
+
+          cv_bridge::CvImageConstPtr cv_ptr;
+          try
+          {// Validate image conversion before committing the selection.
+            cv_ptr = cv_bridge::toCvShare(selected_entry.msg, "bgr8");
+          }
+          catch (const cv_bridge::Exception &e)
+          {
+            best_state.dropped_convert_fail++;
+            RCLCPP_WARN(this->node->get_logger(), "[sync] cv_bridge convert failed cam=%d: %s", best_cam, e.what());
+            mtx_buffer.unlock();
+            continue;
+          }
+
+          // Preserve the selected camera and image for the VIO stage.
+          pending_selection.valid = true;
+          pending_selection.cam_idx = best_cam;
+          pending_selection.capture_time = selected_entry.capture_time;
+          pending_selection.synced_capture_time = selected_entry.capture_time + exposure_time_init;
+          pending_selection.received_time = selected_entry.received_time;
+          pending_selection.msg = selected_entry.msg;
+          pending_selection.cv_ptr = cv_ptr;
+
+          // Mark the camera as used in the current selection round.
+          if (best_cam < static_cast<int>(round_done.size())) round_done[best_cam] = true;
+          best_state.use_count++;
+          selected_dt = (last_selected_synced_capture_time < 0.0) ? -1.0 : (pending_selection.synced_capture_time - last_selected_synced_capture_time);
+          last_selected_synced_capture_time = pending_selection.synced_capture_time;
+          last_selected_cam_idx = best_cam;
+          selected = true;
+          mtx_buffer.unlock();
         }
 
-        RCLCPP_ERROR(
-            this->node->get_logger(),"[ Data Cut ] Throw one image frame!");
+        if (!selected && reset_try == 0)
+        {
+          for (int cam = 0; cam < camera_count; ++cam)
+          {
+            if (cam < static_cast<int>(camera_selectable.size()) && camera_selectable[cam]) round_done[cam] = false;
+          }
+        }
+      }
+
+      if (!selected)
+      {
+        std::ostringstream reason_oss;
+        for (int cam = 0; cam < camera_count; ++cam)
+        {
+          reason_oss << " cam=" << cam << "{empty=" << fail_empty[cam]
+                     << ",horizon_not_ready=" << fail_horizon_not_ready[cam]
+                     << ",stale_dropped=" << fail_stale_dropped[cam] << "}";
+        }
+        RCLCPP_INFO(this->node->get_logger(), "[sync] no selectable image candidate.%s", reason_oss.str().c_str());
         return false;
       }
 
-      if (img_capture_time > lid_newest_time || img_capture_time > imu_newest_time)
-      {
-        // RCLCPP_ERROR(this->node->get_logger(), "lost first camera frame");
-        // printf("img_capture_time, lid_newest_time, imu_newest_time: %lf , %lf
-        // , %lf \n", img_capture_time, lid_newest_time, imu_newest_time);
-        return false;
-      }
+      RCLCPP_INFO(
+        this->node->get_logger(),
+        "[sync] selected cam=%d capture=%.6f synced_capture=%.6f dt=%.6f%s",
+        pending_selection.cam_idx,
+        pending_selection.capture_time,
+        pending_selection.synced_capture_time,
+        selected_dt,
+        build_queue_stats().c_str());
 
       struct MeasureGroup m;
 
-      // printf("[ Data Cut ] LIO \n");
-      // printf("[ Data Cut ] img_capture_time: %lf \n", img_capture_time);
+      // Propagate the selected camera index to the LIO measurement.
+      m.cam_idx = pending_selection.cam_idx;
       m.imu.clear();
-      m.lio_time = img_capture_time;
+      m.lio_time = pending_selection.synced_capture_time;
       mtx_buffer.lock();
       while (!imu_buffer.empty())
       {
         if (stamp2Sec(imu_buffer.front()->header.stamp) > m.lio_time) break;
-
         if (stamp2Sec(imu_buffer.front()->header.stamp) > meas.last_lio_update_time) m.imu.push_back(imu_buffer.front());
-
         imu_buffer.pop_front();
-        // printf("[ Data Cut ] imu time: %lf \n",
-        // stamp2Sec(imu_buffer.front()->header.stamp));
       }
       mtx_buffer.unlock();
       sig_buffer.notify_all();
@@ -1317,11 +1450,10 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
       int max_size = meas.pcl_proc_cur->size() + 24000 * lid_frame_num;
       meas.pcl_proc_cur->reserve(max_size);
       meas.pcl_proc_next->reserve(max_size);
-      // deque<PointCloudXYZI::Ptr> lidar_buffer_tmp;
 
       while (!lid_raw_data_buffer.empty())
       {
-        if (lid_header_time_buffer.front() > img_capture_time) break;
+        if (lid_header_time_buffer.front() > m.lio_time) break;
         auto pcl(lid_raw_data_buffer.front()->points);
         double frame_header_time(lid_header_time_buffer.front());
         float max_offs_time_ms = (m.lio_time - frame_header_time) * 1000.0f;
@@ -1346,54 +1478,37 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 
       meas.measures.push_back(m);
       meas.lio_vio_flg = LIO;
-      // meas.last_lio_update_time = m.lio_time;
-      // printf("!!! meas.lio_vio_flg: %d \n", meas.lio_vio_flg);
-      // printf("[ Data Cut ] pcl_proc_cur number: %d \n", meas.pcl_proc_cur
-      // ->points.size()); printf("[ Data Cut ] LIO process time: %lf \n",
-      // omp_get_wtime() - t0);
       return true;
     }
 
     case LIO:
     {
-      double img_capture_time;
-
+      // Reuse the exact image selected during the LIO stage.
+      if (!pending_selection.valid)
       {
-        std::lock_guard<std::mutex> lock(mtx_buffer);
-
-        if (camera_queue_states[0].queue.empty())
-          return false;
-
-        img_capture_time =
-            camera_queue_states[0].queue.front().capture_time
-            + exposure_time_init;
+        RCLCPP_WARN(this->node->get_logger(), "[sync] LIO stage has no pending selection.");
+        return false;
       }
-      meas.lio_vio_flg = VIO;
-      // printf("[ Data Cut ] VIO \n");
-      meas.measures.clear();
-      double imu_time = stamp2Sec(imu_buffer.front()->header.stamp);
 
       struct MeasureGroup m;
-      m.vio_time = img_capture_time;
+
+      // Preserve camera identity and synchronized image timestamp.
+      m.cam_idx = pending_selection.cam_idx;
+      m.vio_time = pending_selection.synced_capture_time;
       m.lio_time = meas.last_lio_update_time;
-      m.img = img_buffer.front();
-      mtx_buffer.lock();
-      // while ((!imu_buffer.empty() && (imu_time < img_capture_time)))
-      // {
-      //   imu_time = stamp2Sec(imu_buffer.front()->header.stamp);
-      //   if (imu_time > img_capture_time) break;
-      //   m.imu.push_back(imu_buffer.front());
-      //   imu_buffer.pop_front();
-      //   printf("[ Data Cut ] imu time: %lf \n",
-      //   stamp2Sec(imu_buffer.front()->header.stamp));
-      // }
-      img_buffer.pop_front();
-      img_time_buffer.pop_front();
-      mtx_buffer.unlock();
-      sig_buffer.notify_all();
+
+      // Copy the selected image and its reception timestamp.
+      m.img = pending_selection.cv_ptr->image.clone();
+      m.img_received_time = pending_selection.received_time;
+
+      // Clear the pending selection after preparing the VIO measurement.
+      pending_selection = PendingSelection{};
+
+      meas.lio_vio_flg = VIO;
+      meas.measures.clear();
       meas.measures.push_back(m);
-      lidar_pushed = false; // after VIO update, the _lidar_frame_end_time will be refresh.
-      // printf("[ Data Cut ] VIO process time: %lf \n", omp_get_wtime() - t0);
+
+      lidar_pushed = false;
       return true;
     }
 
@@ -1440,6 +1555,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
   }
   RCLCPP_ERROR(this->node->get_logger(), "out sync");
 }
+
 
 void LIVMapper::publish_img_rgb(const image_transport::Publisher &pubImage, VIOManagerPtr vio_manager)
 {

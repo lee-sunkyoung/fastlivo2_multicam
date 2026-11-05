@@ -102,10 +102,27 @@ public:
     uint64_t use_count = 0;
   };
 
-  // Keep the same camera 0 frame across LIO and VIO processing - used for this middle step, will be eliminated
-  CameraImageEntry step3_active_image;
-  bool step3_active_image_valid = false;
+  // Preserve the selected frame between LIO and VIO updates.
+  struct PendingSelection
+  {
+    bool valid = false;
+    int cam_idx = -1;
+    double capture_time = 0.0;
+    double synced_capture_time = 0.0;
+    std::chrono::steady_clock::time_point received_time;
+    sensor_msgs::msg::Image::ConstSharedPtr msg;
+    cv_bridge::CvImageConstPtr cv_ptr;
+  };
+  PendingSelection pending_selection;
 
+  // Track camera selection order and prevent repeated selection in a round.
+  std::vector<bool> round_done;
+  std::vector<bool> camera_selectable;
+  int last_selected_cam_idx = -1;
+  double last_selected_synced_capture_time = -1.0;
+
+  // Keep camera 0 active until per-camera VIO managers are implemented.
+  bool single_vio_manager_mode = true;
 
   // Keep image buffers and initialization states separate for each camera.
   int camera_queue_max = 3;
