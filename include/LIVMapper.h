@@ -54,7 +54,7 @@ public:
   void standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
   void livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg_in);
   void imu_cbk(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in);
-  void img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in);
+  void img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in, int cam_idx);
   void publish_img_rgb(const image_transport::Publisher &pubImage, VIOManagerPtr vio_manager);
   void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudFullRes, VIOManagerPtr vio_manager);
   void publish_visual_sub_map(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubSubVisualMap);
@@ -81,6 +81,36 @@ public:
   int camera_count = 1;
   std::vector<CameraRuntime> camera_runtimes;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr> img_subs;
+ 
+  // Store each image with its corrected timestamp and reception time.
+  struct CameraImageEntry
+  {
+    sensor_msgs::msg::Image::ConstSharedPtr msg;
+    double capture_time = 0.0;
+    std::chrono::steady_clock::time_point received_time;
+  };
+  
+  // Maintain an independent image queue and drop statistics for each camera.
+  struct CameraQueueState
+  {
+    std::deque<CameraImageEntry> queue;
+    double last_timestamp_img = -1.0;
+    uint64_t dropped_overflow = 0;
+    uint64_t dropped_old = 0;
+    uint64_t dropped_stale = 0;
+    uint64_t dropped_convert_fail = 0;
+    uint64_t use_count = 0;
+  };
+
+  // Keep the same camera 0 frame across LIO and VIO processing - used for this middle step, will be eliminated
+  CameraImageEntry step3_active_image;
+  bool step3_active_image_valid = false;
+
+
+  // Keep image buffers and initialization states separate for each camera.
+  int camera_queue_max = 3;
+  std::vector<bool> first_image_size_checked;
+  std::vector<CameraQueueState> camera_queue_states;
 
   std::mutex mtx_buffer, mtx_buffer_imu_prop;
   std::condition_variable sig_buffer;
@@ -142,7 +172,6 @@ public:
   deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu_buffer;
   deque<cv::Mat> img_buffer;
   deque<double> img_time_buffer;
-  deque<std::chrono::steady_clock::time_point> img_received_time_buffer;
   vector<pointWithVar> _pv_list;
   vector<double> extrinT;
   vector<double> extrinR;

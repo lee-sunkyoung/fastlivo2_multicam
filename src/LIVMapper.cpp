@@ -78,6 +78,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   try_declare.template operator()<int>("common.lidar_en", 1);
   try_declare.template operator()<std::string>("common.img_topic", "/left_camera/image");
   try_declare.template operator()<int>("common.camera_count", 1);
+  try_declare.template operator()<int>("common.camera_queue_max", 3);
 
   try_declare.template operator()<bool>("vio.normal_en", true);
   try_declare.template operator()<bool>("vio.inverse_composition_en", false);
@@ -137,6 +138,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   this->node->get_parameter("common.lidar_en", lidar_en);
   this->node->get_parameter("common.img_topic", img_topic);
   this->node->get_parameter("common.camera_count", camera_count);
+  this->node->get_parameter("common.camera_queue_max", camera_queue_max);
 
   this->node->get_parameter("vio.normal_en", normal_en);
   this->node->get_parameter("vio.inverse_composition_en", inverse_composition_en);
@@ -308,6 +310,14 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
 
   // count all valuable cams
   camera_count = static_cast<int>(camera_runtimes.size());
+  if (camera_queue_max < 1)
+  {
+    RCLCPP_WARN(this->node->get_logger(), "common.camera_queue_max is %d, force to 1", camera_queue_max);
+    camera_queue_max = 1;
+  }
+
+  camera_queue_states.assign(camera_count, CameraQueueState{});
+  first_image_size_checked.assign(camera_count, false);
 
   // existing vio code reads these legacy single-cam members directly , 
   // so copy camera_1 into them to avoid changing the rest of the code.
@@ -412,7 +422,19 @@ void LIVMapper::initializeSubscribersAndPublishers(rclcpp::Node::SharedPtr &node
     sub_pcl = this->node->create_subscription<sensor_msgs::msg::PointCloud2>(lid_topic, 200000, std::bind(&LIVMapper::standard_pcl_cbk, this, std::placeholders::_1));
   }
   sub_imu = this->node->create_subscription<sensor_msgs::msg::Imu>(imu_topic, 200000, std::bind(&LIVMapper::imu_cbk, this, std::placeholders::_1));
-  sub_img = this->node->create_subscription<sensor_msgs::msg::Image>(img_topic, 200000, std::bind(&LIVMapper::img_cbk, this, std::placeholders::_1));
+  
+  // Subscribe to each camera topic and pass its index to the image callback.
+  img_subs.clear();
+  img_subs.reserve(camera_runtimes.size());
+  for (int i = 0; i < camera_count; ++i)
+  {
+    const std::string topic = camera_runtimes[i].img_topic;
+    auto sub = this->node->create_subscription<sensor_msgs::msg::Image>(
+      topic,
+      200000,
+      [this, i](const sensor_msgs::msg::Image::ConstSharedPtr &msg) { this->img_cbk(msg, i); });
+    img_subs.push_back(sub);
+  }
   
   pubLaserCloudFullRes = this->node->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", 100);
   pubNormal = this->node->create_publisher<visualization_msgs::msg::MarkerArray>("/visualization_marker", 100);
@@ -1030,10 +1052,10 @@ cv::Mat LIVMapper::getImageFromMsg(const sensor_msgs::msg::Image::ConstSharedPtr
 }
 
 // static int i = 0;
-void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in)
+void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,int cam_idx)
 {
   if (!img_en) return;
-  sensor_msgs::msg::Image::SharedPtr msg(new sensor_msgs::msg::Image(*msg_in));
+  if (cam_idx < 0 || cam_idx >= camera_count) return;
   // if ((abs(stamp2Sec(msg->header.stamp) - last_timestamp_img) > 0.2 && last_timestamp_img > 0) || sync_jump_flag)
   // {
   //   RCLCPP_WARN(this->node->get_logger(), "img jumps %.3f\n", stamp2Sec(msg->header.stamp) - last_timestamp_img);
@@ -1048,48 +1070,113 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in)
   //   if (i % 4 != 0) return;
   // }
   // double msg_header_time =  stamp2Sec(msg->header.stamp);
-  double msg_header_time = stamp2Sec(msg->header.stamp) + img_time_offset;
-  if (abs(msg_header_time - last_timestamp_img) < 0.001) return;
-  RCLCPP_INFO(this->node->get_logger(), "Get image, its header time: %.6f", msg_header_time);
+
+  const auto &msg = msg_in;
+
+  // Apply the camera-specific time offset to the image timestamp.
+  const double msg_header_time =
+      stamp2Sec(msg->header.stamp)
+      + camera_runtimes[cam_idx].time_offset;
+
   if (last_timestamp_lidar < 0) return;
-
-  if (msg_header_time < last_timestamp_img)
+  
+  // Check the image resolution against the camera model on the first frame.
+  if (cam_idx == 0 && !first_image_size_checked[0])
   {
-    RCLCPP_ERROR(this->node->get_logger(), "image loop back. \n");
+    if (vio_manager && vio_manager->cam)
+    {
+      const int model_w = vio_manager->cam->width();
+      const int model_h = vio_manager->cam->height();
+      const int msg_w = static_cast<int>(msg->width);
+      const int msg_h = static_cast<int>(msg->height);
+
+      if (msg_w != model_w || msg_h != model_h)
+      {
+        RCLCPP_ERROR(
+            this->node->get_logger(),
+            "Image/model size mismatch: cam=%d image=%dx%d model=%dx%d",
+            cam_idx, msg_w, msg_h, model_w, model_h);
+
+        rclcpp::shutdown();
+        return;
+      }
+
+      first_image_size_checked[0] = true;
+    }
+  }
+
+  std::unique_lock<std::mutex> lock(mtx_buffer);
+
+  // Access the image queue associated with the source camera.
+  auto &cam_state = camera_queue_states[cam_idx];
+
+  if (std::abs(msg_header_time - cam_state.last_timestamp_img) < 0.001)
+    return;
+
+  if (msg_header_time < cam_state.last_timestamp_img)
+  {
+    RCLCPP_ERROR(
+        this->node->get_logger(),
+        "image loop back cam=%d",
+        cam_idx);
     return;
   }
 
-  mtx_buffer.lock();
-
-  double img_time_correct = msg_header_time; // last_timestamp_lidar + 0.105;
-
-  if (img_time_correct - last_timestamp_img < 0.02)
+  if (msg_header_time - cam_state.last_timestamp_img < 0.02)
   {
-    RCLCPP_WARN(this->node->get_logger(), "Image need Jumps: %.6f", img_time_correct);
-    mtx_buffer.unlock();
-    sig_buffer.notify_all();
+    RCLCPP_WARN(
+        this->node->get_logger(),
+        "Image need Jumps cam=%d: %.6f",
+        cam_idx, msg_header_time);
     return;
   }
 
-  cv::Mat img_cur = getImageFromMsg(msg);
-  img_buffer.push_back(img_cur);
-  img_time_buffer.push_back(img_time_correct);
+  // Store the original image message without converting it to cv::Mat
+  CameraImageEntry entry;
+  entry.msg = msg;
+  entry.capture_time = msg_header_time;
+  entry.received_time = std::chrono::steady_clock::now();
 
-  // ROS_INFO("Correct Image time: %.6f", img_time_correct);
+  cam_state.queue.push_back(entry);
+  
+  // Remove the oldest frames when the camera queue exceeds its size limit.
+  while (static_cast<int>(cam_state.queue.size()) > camera_queue_max)
+  {
+    cam_state.queue.pop_front();
+    cam_state.dropped_overflow++;
+  }
 
-  last_timestamp_img = img_time_correct;
-  // cv::imshow("img", img);
-  // cv::waitKey(1);
-  // cout<<"last_timestamp_img:::"<<last_timestamp_img<<endl;
-  mtx_buffer.unlock();
+  cam_state.last_timestamp_img = msg_header_time;
+
+  if (cam_idx == 0)
+    last_timestamp_img = msg_header_time;
+
+  RCLCPP_INFO_THROTTLE(
+      this->node->get_logger(),
+      *this->node->get_clock(),
+      1000,
+      "[cam=%d] queue_len=%zu overflow_drop=%llu",
+      cam_idx,
+      cam_state.queue.size(),
+      static_cast<unsigned long long>(cam_state.dropped_overflow));
+
+  lock.unlock();
   sig_buffer.notify_all();
 }
 
+// Temporarily use only camera 0 until multi-camera synchronization is implemented.
 bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 {
   if (lid_raw_data_buffer.empty() && lidar_en) return false;
-  if (img_buffer.empty() && img_en) return false;
   if (imu_buffer.empty() && imu_en) return false;
+
+  if (slam_mode_ == LIVO && img_en)
+  {
+    std::lock_guard<std::mutex> lock(mtx_buffer);
+    if (camera_queue_states.empty() ||
+        camera_queue_states[0].queue.empty())
+      return false;
+  }
 
   switch (slam_mode_)
   {
@@ -1154,7 +1241,17 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
     case VIO:
     {
       // printf("!!! meas.lio_vio_flg: %d \n", meas.lio_vio_flg);
-      double img_capture_time = img_time_buffer.front() + exposure_time_init;
+      double img_capture_time;
+      {
+        std::lock_guard<std::mutex> lock(mtx_buffer);
+
+        if (camera_queue_states[0].queue.empty())
+          return false;
+
+        img_capture_time =
+            camera_queue_states[0].queue.front().capture_time
+            + exposure_time_init;
+      }
       /*** has img topic, but img topic timestamp larger than lidar end time,
        * process lidar topic. After LIO update, the meas.lidar_frame_end_time
        * will be refresh. ***/
@@ -1166,11 +1263,22 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
       double lid_newest_time = lid_header_time_buffer.back() + lid_raw_data_buffer.back()->points.back().curvature / double(1000);
       double imu_newest_time = stamp2Sec(imu_buffer.back()->header.stamp);
 
+
       if (img_capture_time < meas.last_lio_update_time + 0.00001)
       {
-        img_buffer.pop_front();
-        img_time_buffer.pop_front();
-        RCLCPP_ERROR(this->node->get_logger(), "[ Data Cut ] Throw one image frame! \n");
+        std::lock_guard<std::mutex> lock(mtx_buffer);
+        auto &state = camera_queue_states[0];
+
+        if (!state.queue.empty() &&
+            state.queue.front().capture_time + exposure_time_init
+                < meas.last_lio_update_time + 0.00001)
+        {
+          state.queue.pop_front();
+          state.dropped_stale++;
+        }
+
+        RCLCPP_ERROR(
+            this->node->get_logger(),"[ Data Cut ] Throw one image frame!");
         return false;
       }
 
@@ -1248,7 +1356,18 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 
     case LIO:
     {
-      double img_capture_time = img_time_buffer.front() + exposure_time_init;
+      double img_capture_time;
+
+      {
+        std::lock_guard<std::mutex> lock(mtx_buffer);
+
+        if (camera_queue_states[0].queue.empty())
+          return false;
+
+        img_capture_time =
+            camera_queue_states[0].queue.front().capture_time
+            + exposure_time_init;
+      }
       meas.lio_vio_flg = VIO;
       // printf("[ Data Cut ] VIO \n");
       meas.measures.clear();
