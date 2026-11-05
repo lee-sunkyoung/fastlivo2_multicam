@@ -78,8 +78,6 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   try_declare.template operator()<int>("common.lidar_en", 1);
   try_declare.template operator()<std::string>("common.img_topic", "/left_camera/image");
   try_declare.template operator()<int>("common.camera_count", 1);
-  try_declare.template operator()<int>("common.camera_queue_max", 3);
-  try_declare.template operator()<bool>("common.single_vio_manager_mode", true);
 
   try_declare.template operator()<bool>("vio.normal_en", true);
   try_declare.template operator()<bool>("vio.inverse_composition_en", false);
@@ -139,8 +137,6 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   this->node->get_parameter("common.lidar_en", lidar_en);
   this->node->get_parameter("common.img_topic", img_topic);
   this->node->get_parameter("common.camera_count", camera_count);
-  this->node->get_parameter("common.camera_queue_max", camera_queue_max);
-  this->node->get_parameter("common.single_vio_manager_mode", single_vio_manager_mode);
 
   this->node->get_parameter("vio.normal_en", normal_en);
   this->node->get_parameter("vio.inverse_composition_en", inverse_composition_en);
