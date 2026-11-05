@@ -1,4 +1,8 @@
-# FAST-LIVO2 ROS2 HUMBLE
+# FAST-LIVO2 ROS2 with multi camera system
+
+dev on
+- livox + 2 realsens system
+- jazzy
 
 ## FAST-LIVO2: Fast, Direct LiDAR-Inertial-Visual Odometry
 
