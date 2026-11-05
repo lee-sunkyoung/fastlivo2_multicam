@@ -1,5 +1,8 @@
 # FAST-LIVO2 ROS2
 
+ros2 jazzy 
+livox + 2 realsens
+
 ## FAST-LIVO2: Fast, Direct LiDAR-Inertial-Visual Odometry
 
 Thanks to hku mars lab chunran zheng for the open source excellent work
