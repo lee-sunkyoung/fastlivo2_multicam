@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     common:
-      img_topic: "/camera/left/jpeg"
+      img_topic: "/camera/rgbd_front_left/color/image_raw"
       lid_topic: "/livox/lidar"
       imu_topic: "/livox/imu"
       img_en: 1
@@ -9,10 +9,32 @@
       ros_driver_bug_fix: false
       enable_image_processing: true
       camera_count: 2
+      single_vio_manager_mode: false 
+
+    camera_1:
+      img_topic: "/camera/rgbd_front_left/color/image_raw"
+      calib_ns: "camera_1"
+      time_offset: 0.0
+      # lidar - front leftcam 
+      Rcl: [-0.828429, -0.472510,  0.300733, 
+            0.004545, -0.542586, -0.839988,
+            0.560076, -0.694503,  0.451641]
+      Pcl: [0.218868, 0.134147, -0.029091]
+
+    camera_2:
+      img_topic: "/camera/rgbd_front_right/color/image_raw"
+      calib_ns: "camera_2"
+      time_offset: 0.0 
+      # lidar - front right cam 
+      Rcl: [-0.818771,  0.493977, -0.292576,
+            -0.026349, -0.541403, -0.840350,
+            -0.573515, -0.680345,  0.456301]
+      Pcl: [-0.175616, 0.152070, -0.073612]
 
     extrin_calib:
-      extrinsic_T: [0.011, 0.02329, -0.04412]
+      extrinsic_T: [0.011, 0.02329, -0.04412] # lidar-imu
       extrinsic_R: [1., 0., 0., 0., 1., 0., 0., 0., 1.]
+      # this rcl pcl not used when camera_1,2,,, used. 
       Rcl: [0.8459084992484703, -0.4535552772229826, 0.28058228989439776, 0.3274101197085882, 0.026335829096533758, -0.9445152394843643, 0.4210005040514897, 0.8908389498719628, 0.17077628927755173]
       Pcl: [0.022648260370124056, -0.09188984649611615, -0.03436178897905727]
       
@@ -24,7 +46,7 @@
     preprocess:
       point_filter_num: 1
       filter_size_surf: 0.001
-      lidar_type: 7 # Livox Mid-360 LiDAR
+      lidar_type: 1 # Livox Mid-360 LiDAR
       scan_line: 4
       blind: 0.5
 

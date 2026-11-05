@@ -11,6 +11,10 @@ which is included as part of this source code package.
 */
 
 #include "LIVMapper.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <sstream>
 #include <vikit/camera_loader.h>
 
 using namespace Sophus;
@@ -73,6 +77,9 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   try_declare.template operator()<int>("common.img_en", 1);
   try_declare.template operator()<int>("common.lidar_en", 1);
   try_declare.template operator()<std::string>("common.img_topic", "/left_camera/image");
+  try_declare.template operator()<int>("common.camera_count", 1);
+  try_declare.template operator()<int>("common.camera_queue_max", 3);
+  try_declare.template operator()<bool>("common.single_vio_manager_mode", true);
 
   try_declare.template operator()<bool>("vio.normal_en", true);
   try_declare.template operator()<bool>("vio.inverse_composition_en", false);
@@ -131,6 +138,9 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   this->node->get_parameter("common.img_en", img_en);
   this->node->get_parameter("common.lidar_en", lidar_en);
   this->node->get_parameter("common.img_topic", img_topic);
+  this->node->get_parameter("common.camera_count", camera_count);
+  this->node->get_parameter("common.camera_queue_max", camera_queue_max);
+  this->node->get_parameter("common.single_vio_manager_mode", single_vio_manager_mode);
 
   this->node->get_parameter("vio.normal_en", normal_en);
   this->node->get_parameter("vio.inverse_composition_en", inverse_composition_en);
@@ -182,7 +192,141 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   this->node->get_parameter("publish.pub_effect_point_en", pub_effect_point_en);
   this->node->get_parameter("publish.dense_map_en", dense_map_en);
 
+  //check camera count
+  if (camera_count < 1)
+  {
+    RCLCPP_WARN(this->node->get_logger(), "common.camera_count is %d, force to 1", camera_count);
+    camera_count = 1;
+  }
+
+  auto get_block_param_name = [](int idx, const std::string &key)
+  {
+    return std::string("camera_") + std::to_string(idx) + "." + key;
+  };
+  auto is_valid_rotation_size = [](const std::vector<double> &r) { return r.size() == 9; };
+  auto is_valid_translation_size = [](const std::vector<double> &t) { return t.size() == 3; };
+
+  //read one cam-idx block and fill
+  auto try_load_camera_block = [&](int idx, CameraRuntime &runtime, std::vector<std::string> &missing_keys, std::vector<std::string> &invalid_keys)
+  {
+    // return true if the block exist, false if entirely absent
+    const std::string missing_str = "__MISSING__";
+    const double missing_double = std::numeric_limits<double>::quiet_NaN();
+    const std::string topic_key = get_block_param_name(idx, "img_topic");
+    const std::string calib_key = get_block_param_name(idx, "calib_ns");
+    const std::string time_key = get_block_param_name(idx, "time_offset");
+    const std::string r_key = get_block_param_name(idx, "Rcl");
+    const std::string t_key = get_block_param_name(idx, "Pcl");
+    
+    const std::string topic = try_declare.template operator()<std::string>(topic_key, missing_str);
+    const std::string calib_ns = try_declare.template operator()<std::string>(calib_key, missing_str);
+    const double time_offset = try_declare.template operator()<double>(time_key, missing_double);
+    const std::vector<double> rcl = try_declare.template operator()<std::vector<double>>(r_key, std::vector<double>{});
+    const std::vector<double> pcl = try_declare.template operator()<std::vector<double>>(t_key, std::vector<double>{});
+    
+    const bool block_exists = (topic != missing_str) || (calib_ns != missing_str) || !std::isnan(time_offset) || !rcl.empty() || !pcl.empty();
+    if (!block_exists) { return false; }
+    
+    // missing, invalid valus are collected and log them all at once
+    if (topic == missing_str) missing_keys.push_back(topic_key);
+    if (calib_ns == missing_str) missing_keys.push_back(calib_key);
+    if (std::isnan(time_offset)) missing_keys.push_back(time_key);
+    if (rcl.empty()) missing_keys.push_back(r_key);
+    if (pcl.empty()) missing_keys.push_back(t_key);
+    
+    if (!rcl.empty() && !is_valid_rotation_size(rcl)) invalid_keys.push_back(r_key + " (expected 9 values)");
+    if (!pcl.empty() && !is_valid_translation_size(pcl)) invalid_keys.push_back(t_key + " (expected 3 values)");
+    
+    // dont fill runtime if there is error 
+    if (!missing_keys.empty() || !invalid_keys.empty()) { return true; }
+
+    runtime.img_topic = topic;
+    runtime.calib_ns = calib_ns;
+    runtime.time_offset = time_offset;
+    runtime.Rcl = rcl;
+    runtime.Pcl = pcl;
+    return true;
+  };
+
+  camera_runtimes.clear();
+  CameraRuntime first_camera;
+  std::vector<std::string> first_missing_keys;
+  std::vector<std::string> first_invalid_keys;
+  const bool first_block_exists = try_load_camera_block(1, first_camera, first_missing_keys, first_invalid_keys);
+
+  //if camera_1 block missed , fall back to single camera keys
+  if (!first_block_exists)
+  { 
+    const bool legacy_available = !img_topic.empty() && is_valid_rotation_size(cameraextrinR) && is_valid_translation_size(cameraextrinT);
+    if (!legacy_available)
+    {
+      RCLCPP_ERROR(this->node->get_logger(), "camera_1 block is missing and legacy single-camera keys are incomplete.");
+      throw std::runtime_error("Missing camera_1 block and no valid legacy camera configuration.");
+    }
+
+    camera_count = 1;
+    CameraRuntime legacy_runtime;
+    legacy_runtime.img_topic = img_topic;
+    legacy_runtime.calib_ns = "camera";
+    legacy_runtime.time_offset = img_time_offset;
+    legacy_runtime.Rcl = cameraextrinR;
+    legacy_runtime.Pcl = cameraextrinT;
+    camera_runtimes.push_back(legacy_runtime);
+    RCLCPP_WARN(this->node->get_logger(), "camera_1 block is missing. Fall back to legacy single-camera keys.");
+  }
+  else // if cam_1 exists, ignore legacy keys and use the block
+  {
+    if (!first_missing_keys.empty() || !first_invalid_keys.empty())
+    {
+      for (const auto &key : first_missing_keys) { RCLCPP_ERROR(this->node->get_logger(), "Missing required key: %s", key.c_str()); }
+      for (const auto &key : first_invalid_keys) { RCLCPP_ERROR(this->node->get_logger(), "Invalid key: %s", key.c_str()); }
+      throw std::runtime_error("Invalid camera_1 parameter block.");
+    }
+
+    camera_runtimes.push_back(first_camera);
+    for (int i = 2; i <= camera_count; ++i)
+    {
+      CameraRuntime runtime;
+      std::vector<std::string> missing_keys;
+      std::vector<std::string> invalid_keys;
+      const bool block_exists = try_load_camera_block(i, runtime, missing_keys, invalid_keys);
+
+      if (!block_exists)
+      {
+        std::ostringstream oss;
+        oss << "camera_" << i << " block is missing.";
+        RCLCPP_ERROR(this->node->get_logger(), "%s", oss.str().c_str());
+        throw std::runtime_error(oss.str());
+      }
+
+      if (!missing_keys.empty() || !invalid_keys.empty())
+      {
+        for (const auto &key : missing_keys) { RCLCPP_ERROR(this->node->get_logger(), "Missing required key: %s", key.c_str()); }
+        for (const auto &key : invalid_keys) { RCLCPP_ERROR(this->node->get_logger(), "Invalid key: %s", key.c_str()); }
+        throw std::runtime_error("Invalid camera parameter block.");
+      }
+
+      camera_runtimes.push_back(runtime);
+    }
+  }
+
+  // count all valuable cams, initialize cam state buffer, 
+  camera_count = static_cast<int>(camera_runtimes.size());
+
+  // existing vio code reads these legacy single-cam members directly , 
+  // so copy camera_1 into them to avoid changing the rest of the code.
+  img_topic = camera_runtimes.front().img_topic;
+  img_time_offset = camera_runtimes.front().time_offset;
+  cameraextrinR = camera_runtimes.front().Rcl;
+  cameraextrinT = camera_runtimes.front().Pcl;
+  RCLCPP_INFO(this->node->get_logger(),
+              "Loaded %d camera runtime block(s). Active camera_1: topic=%s calib_ns=%s (Rcl/Pcl -> VIO lidar-to-camera extrinsic)",
+              camera_count,
+              img_topic.c_str(),
+              camera_runtimes.front().calib_ns.c_str());
+
   p_pre->blind_sqr = p_pre->blind * p_pre->blind;
+
 }
 
 void LIVMapper::initializeComponents(rclcpp::Node::SharedPtr &node) 

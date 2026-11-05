@@ -54,7 +54,7 @@ public:
   void standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
   void livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg_in);
   void imu_cbk(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in);
-  void img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in);
+  void img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in, int cam_idx);
   void publish_img_rgb(const image_transport::Publisher &pubImage, VIOManagerPtr vio_manager);
   void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudFullRes, VIOManagerPtr vio_manager);
   void publish_visual_sub_map(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubSubVisualMap);
@@ -68,23 +68,20 @@ public:
   template <typename T> Eigen::Matrix<T, 3, 1> pointBodyToWorld(const Eigen::Matrix<T, 3, 1> &pi);
   cv::Mat getImageFromMsg(const sensor_msgs::msg::Image::ConstSharedPtr &img_msg);
 
-
-    /// add 
-  struct CameraConfig
+//add
+  struct CameraRuntime
   {
     std::string img_topic;
     std::string calib_ns;
-    Eigen::Vector3d Pcl;
-    Eigen::Matrix3d Rcl;
-    Eigen::Vector3d extrinsic_T;
-    Eigen::Matrix3d extrinsic_R;
+    double time_offset = 0.0;
+    std::vector<double> Rcl;
+    std::vector<double> Pcl;
   };
 
-  std::vector<CameraConfig> camera_configs;
+  int camera_count = 1;
+  std::vector<CameraRuntime> camera_runtimes;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr> img_subs;
-  /// add
 
-  
   std::mutex mtx_buffer, mtx_buffer_imu_prop;
   std::condition_variable sig_buffer;
 
