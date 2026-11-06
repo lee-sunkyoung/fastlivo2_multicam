@@ -129,6 +129,11 @@ public:
   std::vector<bool> first_image_size_checked;
   std::vector<CameraQueueState> camera_queue_states;
 
+  std::vector<VIOManagerPtr> vio_managers;
+  // Index of the camera used by the most recent VIO update -for publishing when img_en == 0
+  int last_vio_cam_idx = 0;
+  bool exposure_warned_once = false;
+
   std::mutex mtx_buffer, mtx_buffer_imu_prop;
   std::condition_variable sig_buffer;
 

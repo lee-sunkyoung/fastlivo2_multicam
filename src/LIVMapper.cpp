@@ -79,6 +79,8 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   try_declare.template operator()<std::string>("common.img_topic", "/left_camera/image");
   try_declare.template operator()<int>("common.camera_count", 1);
   try_declare.template operator()<int>("common.camera_queue_max", 3);
+  try_declare.template operator()<bool>("common.single_vio_manager_mode", true);
+
 
   try_declare.template operator()<bool>("vio.normal_en", true);
   try_declare.template operator()<bool>("vio.inverse_composition_en", false);
@@ -139,6 +141,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   this->node->get_parameter("common.img_topic", img_topic);
   this->node->get_parameter("common.camera_count", camera_count);
   this->node->get_parameter("common.camera_queue_max", camera_queue_max);
+  this->node->get_parameter("common.single_vio_manager_mode", single_vio_manager_mode);
 
   this->node->get_parameter("vio.normal_en", normal_en);
   this->node->get_parameter("vio.inverse_composition_en", inverse_composition_en);
@@ -322,9 +325,6 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   camera_selectable.assign(camera_count, true);
   first_image_size_checked.assign(camera_count, false);
 
-  // just this step - Disable other cameras until per-camera VIO managers are available.
-  single_vio_manager_mode = true;
-
   if (single_vio_manager_mode && camera_count > 1)
   {
     for (int i = 1; i < camera_count; ++i) camera_selectable[i] = false;
@@ -361,26 +361,72 @@ void LIVMapper::initializeComponents(rclcpp::Node::SharedPtr &node)
   voxelmap_manager->extT_ << VEC_FROM_ARRAY(extrinT);
   voxelmap_manager->extR_ << MAT_FROM_ARRAY(extrinR);
 
-  if (!vk::camera_loader::loadFromRosNs(this->node, "camera", vio_manager->cam)) throw std::runtime_error("Camera model not correctly specified.");
 
-  vio_manager->grid_size = grid_size;
-  vio_manager->patch_size = patch_size;
-  vio_manager->outlier_threshold = outlier_threshold;
-  vio_manager->setImuToLidarExtrinsic(extT, extR);
-  vio_manager->setLidarToCameraExtrinsic(cameraextrinR, cameraextrinT);
-  vio_manager->state = &_state;
-  vio_manager->state_propagat = &state_propagat;
-  vio_manager->max_iterations = max_iterations;
-  vio_manager->img_point_cov = IMG_POINT_COV;
-  vio_manager->normal_en = normal_en;
-  vio_manager->inverse_composition_en = inverse_composition_en;
-  vio_manager->raycast_en = raycast_en;
-  vio_manager->grid_n_width = grid_n_width;
-  vio_manager->grid_n_height = grid_n_height;
-  vio_manager->patch_pyrimid_level = patch_pyrimid_level;
-  vio_manager->exposure_estimate_en = exposure_estimate_en;
-  vio_manager->colmap_output_en = colmap_output_en;
-  vio_manager->initializeVIO();
+  if (camera_runtimes.empty()) {
+    throw std::runtime_error("No camera runtime configuration available.");
+  }
+
+  if (single_vio_manager_mode && camera_count > 1)
+  {
+    RCLCPP_WARN(this->node->get_logger(), "single_vio_manager_mode enabled: camera_count=%d, only cam_idx=0 is selectable.", camera_count);
+  }
+
+  if (exposure_estimate_en && camera_count > 1 && !exposure_warned_once)
+  {
+    RCLCPP_WARN(this->node->get_logger(), "Exposure estimation is enabled, exposure state may be mixed when switching cameras");
+    exposure_warned_once = true;
+  }
+
+  vio_managers.clear();
+  const int manager_count = single_vio_manager_mode ? 1 : camera_count;
+  for (int i = 0; i < manager_count; ++i)
+  {
+    VIOManagerPtr manager(new VIOManager());
+    const auto &runtime = camera_runtimes[i];
+    if (!vk::camera_loader::loadFromRosNs(this->node, runtime.calib_ns, manager->cam)) {
+      throw std::runtime_error("Camera model not correctly specified for namespace: " + runtime.calib_ns);
+    }
+
+    manager->grid_size = grid_size;
+    manager->patch_size = patch_size;
+    manager->outlier_threshold = outlier_threshold;
+    manager->setImuToLidarExtrinsic(extT, extR);
+    std::vector<double> rcl = runtime.Rcl;
+    std::vector<double> pcl = runtime.Pcl;
+    manager->setLidarToCameraExtrinsic(rcl, pcl);
+    manager->state = &_state;
+    manager->state_propagat = &state_propagat;
+    manager->max_iterations = max_iterations;
+    manager->img_point_cov = IMG_POINT_COV;
+    manager->normal_en = normal_en;
+    manager->inverse_composition_en = inverse_composition_en;
+    manager->raycast_en = raycast_en;
+    manager->grid_n_width = grid_n_width;
+    manager->grid_n_height = grid_n_height;
+    manager->patch_pyrimid_level = patch_pyrimid_level;
+    manager->exposure_estimate_en = exposure_estimate_en;
+    manager->colmap_output_en = colmap_output_en;
+    manager->initializeVIO();
+
+    RCLCPP_INFO(
+      this->node->get_logger(),
+      "[VIO init] cam_idx=%d calib_ns=%s model=(%d x %d x %.3f) intr=(fx=%.6f fy=%.6f cx=%.6f cy=%.6f) Rcl=[%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f] Pcl=[%.6f %.6f %.6f]",
+      i,
+      runtime.calib_ns.c_str(),
+      manager->cam->width(),
+      manager->cam->height(),
+      manager->cam->scale(),
+      manager->cam->fx(),
+      manager->cam->fy(),
+      manager->cam->cx(),
+      manager->cam->cy(),
+      runtime.Rcl[0], runtime.Rcl[1], runtime.Rcl[2], runtime.Rcl[3], runtime.Rcl[4], runtime.Rcl[5], runtime.Rcl[6], runtime.Rcl[7], runtime.Rcl[8],
+      runtime.Pcl[0], runtime.Pcl[1], runtime.Pcl[2]);
+
+    vio_managers.push_back(manager);
+  }
+
+  vio_manager = vio_managers.front();
 
   p_imu->set_extrinsic(extT, extR);
   p_imu->set_gyr_cov_scale(V3D(gyr_cov, gyr_cov, gyr_cov));
@@ -530,6 +576,22 @@ void LIVMapper::stateEstimationAndMapping()
 
 void LIVMapper::handleVIO() 
 {
+  const int cam_idx = LidarMeasures.measures.back().cam_idx;
+  if (cam_idx < 0 || cam_idx >= camera_count)
+  {
+    RCLCPP_ERROR(this->node->get_logger(), "[VIO] invalid cam_idx=%d, skip frame.", cam_idx);
+    return;
+  }
+
+  const int manager_idx = single_vio_manager_mode ? 0 : cam_idx;
+  if (manager_idx < 0 || manager_idx >= static_cast<int>(vio_managers.size()) || !vio_managers[manager_idx])
+  {
+    RCLCPP_ERROR(this->node->get_logger(), "[VIO] no VIOManager for cam_idx=%d manager_idx=%d, skip frame.", cam_idx, manager_idx);
+    return;
+  }
+  VIOManagerPtr selected_vio_manager = vio_managers[manager_idx];
+  last_vio_cam_idx = cam_idx;
+
   euler_cur = RotMtoEuler(_state.rot_end);
   fout_pre << std::setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
             << _state.pos_end.transpose() << " " << _state.vel_end.transpose() << " " << _state.bias_g.transpose() << " "
@@ -552,7 +614,20 @@ void LIVMapper::handleVIO()
     vio_manager->plot_flag = false;
   }
 
-  vio_manager->processFrame(LidarMeasures.measures.back().img, _pv_list, voxelmap_manager->voxel_map_, LidarMeasures.last_lio_update_time - _first_lidar_time);
+  auto img_received_time = LidarMeasures.measures.back().img_received_time;
+  auto t_vio_start = std::chrono::steady_clock::now();
+  selected_vio_manager->processFrame(LidarMeasures.measures.back().img, _pv_list, voxelmap_manager->voxel_map_, LidarMeasures.last_lio_update_time - _first_lidar_time);
+  auto t_vio_end = std::chrono::steady_clock::now();
+
+  const double arrival_to_vio_start_ms = std::chrono::duration<double, std::milli>(t_vio_start - img_received_time).count();
+  const double arrival_to_vio_end_ms = std::chrono::duration<double, std::milli>(t_vio_end - img_received_time).count();
+  const double vio_proc_time_ms = std::chrono::duration<double, std::milli>(t_vio_end - t_vio_start).count();
+  RCLCPP_INFO(this->node->get_logger(),
+              "[Image latency] cam=%d arrival->VIO start: %.3f ms, VIO process: %.3f ms, arrival->VIO end: %.3f ms",
+              cam_idx,
+              arrival_to_vio_start_ms,
+              vio_proc_time_ms,
+              arrival_to_vio_end_ms);
 
   if (imu_prop_enable) 
   {
@@ -880,7 +955,8 @@ void LIVMapper::imu_prop_callback()
     imu_prop_odom.twist.twist.linear.y = vel_i.y();
     imu_prop_odom.twist.twist.linear.z = vel_i.z();
     pubImuPropOdom->publish(imu_prop_odom);
-  }
+  }  try_declare.template operator()<bool>("common.single_vio_manager_mode", true);
+
   mtx_buffer_imu_prop.unlock();
 }
 
@@ -1091,28 +1167,35 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
 
   if (last_timestamp_lidar < 0) return;
   
-  // Check the image resolution against the camera model on the first frame.
-  if (cam_idx == 0 && !first_image_size_checked[0])
+  auto &cam_state = camera_queue_states[cam_idx];
+  if (abs(msg_header_time - cam_state.last_timestamp_img) < 0.001) return;
+  RCLCPP_INFO_THROTTLE(this->node->get_logger(), *this->node->get_clock(), 1000, "Get image cam=%d, header time: %.6f", cam_idx, msg_header_time);
+  if (last_timestamp_lidar < 0) return;
+
+  if (cam_idx < static_cast<int>(first_image_size_checked.size()) && !first_image_size_checked[cam_idx])
   {
-    if (vio_manager && vio_manager->cam)
+    const int manager_idx = single_vio_manager_mode ? (cam_idx == 0 ? 0 : -1) : cam_idx;
+    if (manager_idx >= 0 && manager_idx < static_cast<int>(vio_managers.size()) && vio_managers[manager_idx] && vio_managers[manager_idx]->cam)
     {
-      const int model_w = vio_manager->cam->width();
-      const int model_h = vio_manager->cam->height();
+      const int model_w = vio_managers[manager_idx]->cam->width();
+      const int model_h = vio_managers[manager_idx]->cam->height();
       const int msg_w = static_cast<int>(msg->width);
       const int msg_h = static_cast<int>(msg->height);
-
       if (msg_w != model_w || msg_h != model_h)
       {
-        RCLCPP_ERROR(
-            this->node->get_logger(),
-            "Image/model size mismatch: cam=%d image=%dx%d model=%dx%d",
-            cam_idx, msg_w, msg_h, model_w, model_h);
-
+        RCLCPP_ERROR(this->node->get_logger(),
+                     "Image/model size mismatch: cam_idx=%d topic=%s calib_ns=%s image=%dx%d model=%dx%d. Shutdown.",
+                     cam_idx,
+                     camera_runtimes[cam_idx].img_topic.c_str(),
+                     camera_runtimes[cam_idx].calib_ns.c_str(),
+                     msg_w,
+                     msg_h,
+                     model_w,
+                     model_h);
         rclcpp::shutdown();
         return;
       }
-
-      first_image_size_checked[0] = true;
+      first_image_size_checked[cam_idx] = true;
     }
   }
 
