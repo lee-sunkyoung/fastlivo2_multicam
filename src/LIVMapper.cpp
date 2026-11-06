@@ -607,11 +607,11 @@ void LIVMapper::handleVIO()
 
   if (fabs((LidarMeasures.last_lio_update_time - _first_lidar_time) - plot_time) < (frame_cnt / 2 * 0.1)) 
   {
-    vio_manager->plot_flag = true;
+    selected_vio_manager->plot_flag = true;
   } 
   else 
   {
-    vio_manager->plot_flag = false;
+    selected_vio_manager->plot_flag = false;
   }
 
   auto img_received_time = LidarMeasures.measures.back().img_received_time;
@@ -649,8 +649,8 @@ void LIVMapper::handleVIO()
   //   visual_sub_map->push_back(temp_map);
   // }
 
-  publish_frame_world(pubLaserCloudFullRes, vio_manager);
-  publish_img_rgb(pubImage, vio_manager);
+  publish_frame_world(pubLaserCloudFullRes, selected_vio_manager);
+  publish_img_rgb(pubImage, selected_vio_manager);
 
   euler_cur = RotMtoEuler(_state.rot_end);
   fout_out << std::setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
@@ -767,7 +767,12 @@ void LIVMapper::handleLIO()
   }
   *pcl_w_wait_pub = *laserCloudWorld;
 
-  if (!img_en) publish_frame_world(pubLaserCloudFullRes, vio_manager);
+  if (!img_en)
+  {
+    int manager_idx = single_vio_manager_mode ? 0 : last_vio_cam_idx;
+    if (manager_idx < 0 || manager_idx >= static_cast<int>(vio_managers.size())) manager_idx = 0;
+    if (!vio_managers.empty() && vio_managers[manager_idx]) publish_frame_world(pubLaserCloudFullRes, vio_managers[manager_idx]);
+  }
   if (pub_effect_point_en) publish_effect_world(pubLaserCloudEffect, voxelmap_manager->ptpl_list_);
   if (voxelmap_manager->config_setting_.is_pub_plane_map_) voxelmap_manager->pubVoxelMap();
   publish_path(pubPath);
@@ -1049,8 +1054,7 @@ void LIVMapper::livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstShar
   if (abs(last_timestamp_imu - stamp2Sec(msg->header.stamp)) > 1.0 && !imu_buffer.empty())
   {
     double timediff_imu_wrt_lidar = last_timestamp_imu - stamp2Sec(msg->header.stamp);
-    RCLCPP_INFO(this->node->get_logger(), "\033[95mSelf sync IMU and LiDAR, HARD time lag is %.10lf \n\033[0m", timediff_imu_wrt_lidar - 0.100);
-    // imu_time_offset = timediff_imu_wrt_lidar;
+    RCLCPP_INFO_THROTTLE(this->node->get_logger(), *this->node->get_clock(), 1000, "get imu at time: %.6f", stamp2Sec(msg_in->header.stamp));    // imu_time_offset = timediff_imu_wrt_lidar;
   }
 
   double cur_head_time = stamp2Sec(msg->header.stamp);
@@ -1117,8 +1121,7 @@ void LIVMapper::imu_cbk(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in)
   last_timestamp_imu = timestamp;
 
   imu_buffer.push_back(msg);
-  cout<<"got imu: "<<timestamp<<" imu size "<<imu_buffer.size()<<endl;
-  mtx_buffer.unlock();
+  RCLCPP_INFO_THROTTLE(this->node->get_logger(), *this->node->get_clock(), 1000, "got imu: %.6f imu size %zu", timestamp, imu_buffer.size());  mtx_buffer.unlock();
   if (imu_prop_enable)
   {
     mtx_buffer_imu_prop.lock();
