@@ -1196,6 +1196,9 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
       }
       first_image_size_checked[cam_idx] = true;
     }
+  }
+  
+  std::unique_lock<std::mutex> lock(mtx_buffer);
 
   if (msg_header_time < cam_state.last_timestamp_img)
   {
