@@ -869,7 +869,8 @@ void LIVMapper::run(rclcpp::Node::SharedPtr &node)
     rclcpp::spin_some(this->node);
     if (!sync_packages(LidarMeasures)) 
     {
-      rate.sleep();
+      try { rate.sleep(); }
+      catch (const std::runtime_error &) { break; }
       continue;
     }
     handleFirstFrame();

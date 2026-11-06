@@ -97,11 +97,11 @@
       blind_rgb_points: 0.0
 
     evo:
-      seq_name: "CBD_Building_01"
+      seq_name: "marvin_main2loop"
       pose_output_en: false
 
     pcd_save:
-      pcd_save_en: false
+      pcd_save_en: true
       colmap_output_en: false # need to set interval = -1
       filter_size_pcd: 0.15
       interval: -1
