@@ -955,8 +955,7 @@ void LIVMapper::imu_prop_callback()
     imu_prop_odom.twist.twist.linear.y = vel_i.y();
     imu_prop_odom.twist.twist.linear.z = vel_i.z();
     pubImuPropOdom->publish(imu_prop_odom);
-  }  try_declare.template operator()<bool>("common.single_vio_manager_mode", true);
-
+  } 
   mtx_buffer_imu_prop.unlock();
 }
 
@@ -1197,15 +1196,6 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
       }
       first_image_size_checked[cam_idx] = true;
     }
-  }
-
-  std::unique_lock<std::mutex> lock(mtx_buffer);
-
-  // Access the image queue associated with the source camera.
-  auto &cam_state = camera_queue_states[cam_idx];
-
-  if (std::abs(msg_header_time - cam_state.last_timestamp_img) < 0.001)
-    return;
 
   if (msg_header_time < cam_state.last_timestamp_img)
   {
