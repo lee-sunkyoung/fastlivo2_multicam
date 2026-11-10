@@ -101,6 +101,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
 
   try_declare.template operator()<std::string>("evo.seq_name", "01");
   try_declare.template operator()<bool>("evo.pose_output_en", false);
+  try_declare.template operator()<std::string>("evo.pose_output_path", "Log/result/trajectory.txt");
   try_declare.template operator()<double>("imu.gyr_cov", 1.0);
   try_declare.template operator()<double>("imu.acc_cov", 1.0);
   try_declare.template operator()<int>("imu.imu_int_frame", 30);
@@ -162,6 +163,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
 
   this->node->get_parameter("evo.seq_name", seq_name);
   this->node->get_parameter("evo.pose_output_en", pose_output_en);
+  this->node->get_parameter("evo.pose_output_path", pose_output_path);
   this->node->get_parameter("imu.gyr_cov", gyr_cov);
   this->node->get_parameter("imu.acc_cov", acc_cov);
   this->node->get_parameter("imu.imu_int_frame", imu_int_frame);

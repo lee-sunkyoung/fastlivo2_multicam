@@ -85,7 +85,8 @@
 
     evo:
       seq_name: "lobby2_leftcam"
-      pose_output_en: false
+      pose_output_en: true
+      pose_output_path: "Log/result/trajectory.txt"
 
     pcd_save:
       pcd_save_en: true

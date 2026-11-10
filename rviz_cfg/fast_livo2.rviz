@@ -219,7 +219,7 @@ Visualization Manager:
           Value: true
       Enabled: true
       Name: Odometry
-    - Alpha: 0
+    - Alpha: 1
       Buffer Length: 2
       Class: rviz_default_plugins/Path
       Color: 25; 255; 255
@@ -768,5 +768,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 2705
-  X: 132
-  Y: 64
+  X: 213
+  Y: 320

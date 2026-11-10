@@ -98,7 +98,9 @@
 
     evo:
       seq_name: "marvin_main2loop"
-      pose_output_en: false
+      pose_output_en: true
+      pose_output_path: "Log/result/trajectory.txt"
+
 
     pcd_save:
       pcd_save_en: true
