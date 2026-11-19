@@ -13,6 +13,7 @@ which is included as part of this source code package.
 #include "LIVMapper.h"
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 #include <limits>
 #include <sstream>
 #include <vikit/camera_loader.h>
@@ -52,7 +53,11 @@ LIVMapper::LIVMapper(rclcpp::Node::SharedPtr &node, std::string node_name, const
   path.header.frame_id = "camera_init";
 }
 
-LIVMapper::~LIVMapper() {}
+LIVMapper::~LIVMapper() {
+  if (fout_selected.is_open()) {
+    fout_selected.close();
+  }
+}
 
 void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
 {
@@ -468,6 +473,16 @@ void LIVMapper::initializeFiles()
   }
   if(colmap_output_en) fout_points.open(std::string(ROOT_DIR) + "Log/Colmap/sparse/0/points3D.txt", std::ios::out);
   if(pcd_save_interval > 0) fout_pcd_pos.open(std::string(ROOT_DIR) + "Log/PCD/scans_pos.json", std::ios::out);
+  std::time_t now = std::time(nullptr);
+  std::tm now_tm = *std::localtime(&now);
+  char filename_buf[64];
+  std::strftime(filename_buf, sizeof(filename_buf), "%Y%m%d_%H%M%S", &now_tm);
+  const std::string selected_csv_path = std::string(ROOT_DIR) + "Log/selected_" + filename_buf + ".csv";
+  fout_selected.open(selected_csv_path, std::ios::out);
+  if (fout_selected.is_open()) {
+    fout_selected << "cam,capture_time,last_lio_update_time\n";
+    fout_selected.flush();
+  }
   fout_pre.open(DEBUG_FILE_DIR("mat_pre.txt"), std::ios::out);
   fout_out.open(DEBUG_FILE_DIR("mat_out.txt"), std::ios::out);
 }
@@ -508,7 +523,12 @@ void LIVMapper::initializeSubscribersAndPublishers(rclcpp::Node::SharedPtr &node
   pubLaserCloudDynRmed = this->node->create_publisher<sensor_msgs::msg::PointCloud2>("/dyn_obj_removed", 100);
   pubLaserCloudDynDbg = this->node->create_publisher<sensor_msgs::msg::PointCloud2>("/dyn_obj_dbg_hist", 100);
   mavros_pose_publisher = this->node->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/vision_pose/pose", 10);
-  pubImage = it.advertise("/rgb_img", 1);
+  pubImage.clear();
+  pubImage.reserve(camera_count);
+  for (int i = 0; i < camera_count; ++i)
+  {
+    pubImage.push_back(it.advertise("/rgb_img_" + std::to_string(i + 1), 1));
+  }
   pubImuPropOdom = this->node->create_publisher<nav_msgs::msg::Odometry>("/LIVO2/imu_propagate", 10000);
   imu_prop_timer = this->node->create_wall_timer(0.004s, std::bind(&LIVMapper::imu_prop_callback, this));
   voxelmap_manager->voxel_map_pub_= this->node->create_publisher<visualization_msgs::msg::MarkerArray>("/planes", 10000);
@@ -652,7 +672,7 @@ void LIVMapper::handleVIO()
   // }
 
   publish_frame_world(pubLaserCloudFullRes, selected_vio_manager);
-  publish_img_rgb(pubImage, selected_vio_manager);
+  publish_img_rgb(cam_idx, selected_vio_manager);
 
   euler_cur = RotMtoEuler(_state.rot_end);
   fout_out << std::setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
@@ -863,11 +883,48 @@ void LIVMapper::savePCD()
   }
 }
 
+void LIVMapper::printImageStats()
+{
+  for (int cam = 0; cam < camera_count; ++cam)
+  {
+    const auto &st = camera_queue_states[cam];
+    const uint64_t recv = st.recv_count;
+    const uint64_t used = st.use_count;
+    const double used_ratio = recv > 0 ? (100.0 * static_cast<double>(used) / static_cast<double>(recv)) : 0.0;
+    const double old_ratio = recv > 0 ? (100.0 * static_cast<double>(st.dropped_old) / static_cast<double>(recv)) : 0.0;
+    RCLCPP_INFO(this->node->get_logger(),
+                "[img_stats] cam%d recv=%llu used=%llu(%.1f%%) | skipped(old)=%llu(%.1f%%) stale=%llu overflow=%llu dup=%llu loop=%llu jump=%llu before_lidar=%llu cv=%llu",
+                cam,
+                static_cast<unsigned long long>(recv),
+                static_cast<unsigned long long>(used),
+                used_ratio,
+                static_cast<unsigned long long>(st.dropped_old),
+                old_ratio,
+                static_cast<unsigned long long>(st.dropped_stale),
+                static_cast<unsigned long long>(st.dropped_overflow),
+                static_cast<unsigned long long>(st.dropped_duplicate),
+                static_cast<unsigned long long>(st.dropped_loopback),
+                static_cast<unsigned long long>(st.dropped_timejump),
+                static_cast<unsigned long long>(st.dropped_before_lidar),
+                static_cast<unsigned long long>(st.dropped_convert_fail));
+  }
+  RCLCPP_INFO(this->node->get_logger(),
+              "[img_stats] lidar_recv=%llu imu_recv=%llu",
+              static_cast<unsigned long long>(lidar_recv_count),
+              static_cast<unsigned long long>(imu_recv_count));
+}
+
 void LIVMapper::run(rclcpp::Node::SharedPtr &node) 
 {
   rclcpp::Rate rate(5000);
   while (rclcpp::ok()) 
   {
+    const auto now = std::chrono::steady_clock::now();
+    if (last_image_stats_time == std::chrono::steady_clock::time_point::min() || now - last_image_stats_time >= std::chrono::seconds(10))
+    {
+      printImageStats();
+      last_image_stats_time = now;
+    }
     rclcpp::spin_some(this->node);
     if (!sync_packages(LidarMeasures)) 
     {
@@ -883,6 +940,7 @@ void LIVMapper::run(rclcpp::Node::SharedPtr &node)
 
     stateEstimationAndMapping();
   }
+  printImageStats();
   savePCD();
 }
 
@@ -1025,6 +1083,7 @@ void LIVMapper::RGBpointBodyToWorld(PointType const *const pi, PointType *const 
 void LIVMapper::standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg)
 {
   if (!lidar_en) return;
+  lidar_recv_count++;
   mtx_buffer.lock();
   // cout<<"got feature"<<endl;
   if (stamp2Sec(msg->header.stamp) < last_timestamp_lidar)
@@ -1046,6 +1105,7 @@ void LIVMapper::standard_pcl_cbk(const sensor_msgs::msg::PointCloud2::ConstShare
 void LIVMapper::livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg_in)
 {
   if (!lidar_en) return;
+  lidar_recv_count++;
   mtx_buffer.lock();
   livox_ros_driver2::msg::CustomMsg::SharedPtr msg(new livox_ros_driver2::msg::CustomMsg(*msg_in));
   // if ((abs(stamp2Sec(msg->header.stamp) - last_timestamp_lidar) > 0.2 && last_timestamp_lidar > 0) || sync_jump_flag)
@@ -1061,13 +1121,13 @@ void LIVMapper::livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstShar
   }
 
   double cur_head_time = stamp2Sec(msg->header.stamp);
-  RCLCPP_INFO(this->node->get_logger(), "Get LiDAR, its header time: %.6f", cur_head_time);
+  // [DIAG-OFF] RCLCPP_INFO(this->node->get_logger(), "Get LiDAR, its header time: %.6f", cur_head_time);
   if (cur_head_time < last_timestamp_lidar)
   {
     RCLCPP_ERROR(this->node->get_logger(), "lidar loop back, clear buffer");
     lid_raw_data_buffer.clear();
   }
-  RCLCPP_INFO(this->node->get_logger(), "get point cloud at time: %.6f", stamp2Sec(msg->header.stamp));
+  // [DIAG-OFF] RCLCPP_INFO(this->node->get_logger(), "get point cloud at time: %.6f", stamp2Sec(msg->header.stamp));
   PointCloudXYZI::Ptr ptr(new PointCloudXYZI());
   p_pre->process(msg, ptr);
 
@@ -1088,9 +1148,10 @@ void LIVMapper::livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstShar
 void LIVMapper::imu_cbk(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in)
 {
   if (!imu_en) return;
+  imu_recv_count++;
 
   if (last_timestamp_lidar < 0.0) return;
-  RCLCPP_INFO(this->node->get_logger(), "get imu at time: %.6f", stamp2Sec(msg_in->header.stamp));
+  // [DIAG-OFF] RCLCPP_INFO(this->node->get_logger(), "get imu at time: %.6f", stamp2Sec(msg_in->header.stamp));
   sensor_msgs::msg::Imu::SharedPtr msg(new sensor_msgs::msg::Imu(*msg_in));
   msg->header.stamp = sec2Stamp(stamp2Sec(msg->header.stamp) - imu_time_offset);
   double timestamp = stamp2Sec(msg->header.stamp);
@@ -1170,10 +1231,20 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
       stamp2Sec(msg->header.stamp)
       + camera_runtimes[cam_idx].time_offset;
 
-  if (last_timestamp_lidar < 0) return;
-  
   auto &cam_state = camera_queue_states[cam_idx];
-  if (abs(msg_header_time - cam_state.last_timestamp_img) < 0.001) return;
+  cam_state.recv_count++;
+
+  if (last_timestamp_lidar < 0)
+  {
+    cam_state.dropped_before_lidar++;
+    return;
+  }
+  
+  if (abs(msg_header_time - cam_state.last_timestamp_img) < 0.001)
+  {
+    cam_state.dropped_duplicate++;
+    return;
+  }
   RCLCPP_INFO_THROTTLE(this->node->get_logger(), *this->node->get_clock(), 1000, "Get image cam=%d, header time: %.6f", cam_idx, msg_header_time);
   if (last_timestamp_lidar < 0) return;
 
@@ -1208,6 +1279,7 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
 
   if (msg_header_time < cam_state.last_timestamp_img)
   {
+    cam_state.dropped_loopback++;
     RCLCPP_ERROR(
         this->node->get_logger(),
         "image loop back cam=%d",
@@ -1217,6 +1289,7 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
 
   if (msg_header_time - cam_state.last_timestamp_img < 0.02)
   {
+    cam_state.dropped_timejump++;
     RCLCPP_WARN(
         this->node->get_logger(),
         "Image need Jumps cam=%d: %.6f",
@@ -1283,6 +1356,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
   }
 
   switch (slam_mode_)
+
   {
   case ONLY_LIO:
   {
@@ -1442,6 +1516,11 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 
           auto &best_state = camera_queue_states[best_cam];
           CameraImageEntry selected_entry = best_state.queue[best_idx];
+          if (fout_selected.is_open())
+          {
+            fout_selected << best_cam << "," << std::fixed << std::setprecision(6) << selected_entry.capture_time << "," << meas.last_lio_update_time << "\n";
+            fout_selected.flush();
+          }
           const int old_drop_num = best_idx;
           best_state.queue.erase(best_state.queue.begin(), best_state.queue.begin() + best_idx + 1);
           best_state.dropped_old += old_drop_num;
@@ -1489,14 +1568,14 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 
       if (!selected)
       {
-        std::ostringstream reason_oss;
-        for (int cam = 0; cam < camera_count; ++cam)
-        {
-          reason_oss << " cam=" << cam << "{empty=" << fail_empty[cam]
-                     << ",horizon_not_ready=" << fail_horizon_not_ready[cam]
-                     << ",stale_dropped=" << fail_stale_dropped[cam] << "}";
-        }
-        RCLCPP_INFO(this->node->get_logger(), "[sync] no selectable image candidate.%s", reason_oss.str().c_str());
+        // [DIAG-OFF] std::ostringstream reason_oss;
+        // [DIAG-OFF] for (int cam = 0; cam < camera_count; ++cam)
+        // [DIAG-OFF] {
+        // [DIAG-OFF]   reason_oss << " cam=" << cam << "{empty=" << fail_empty[cam]
+        // [DIAG-OFF]              << ",horizon_not_ready=" << fail_horizon_not_ready[cam]
+        // [DIAG-OFF]              << ",stale_dropped=" << fail_stale_dropped[cam] << "}";
+        // [DIAG-OFF] }
+        // [DIAG-OFF] RCLCPP_INFO(this->node->get_logger(), "[sync] no selectable image candidate.%s", reason_oss.str().c_str());
         return false;
       }
 
@@ -1639,15 +1718,20 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 }
 
 
-void LIVMapper::publish_img_rgb(const image_transport::Publisher &pubImage, VIOManagerPtr vio_manager)
+void LIVMapper::publish_img_rgb(int cam_idx, VIOManagerPtr vio_manager)
 {
+  if (cam_idx < 0 || cam_idx >= static_cast<int>(pubImage.size()))
+  {
+    RCLCPP_ERROR(this->node->get_logger(), "[rgb_img] invalid cam_idx=%d", cam_idx);
+    return;
+  }
+
   cv::Mat img_rgb = vio_manager->img_cp;
   cv_bridge::CvImage out_msg;
   out_msg.header.stamp = this->node->get_clock()->now();
-  // out_msg.header.frame_id = "camera_init";
   out_msg.encoding = sensor_msgs::image_encodings::BGR8;
   out_msg.image = img_rgb;
-  pubImage.publish(out_msg.toImageMsg());
+  pubImage[cam_idx].publish(out_msg.toImageMsg());
 }
 
 void LIVMapper::publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudFullRes, VIOManagerPtr vio_manager)

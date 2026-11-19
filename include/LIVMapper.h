@@ -16,6 +16,7 @@ which is included as part of this source code package.
 #include "IMU_Processing.h"
 #include "vio.h"
 #include "preprocess.h"
+#include <chrono>
 #ifdef PRE_ROS_IRON
 #include <cv_bridge/cv_bridge.h>
 #else
@@ -42,6 +43,7 @@ public:
   void handleVIO();
   void handleLIO();
   void savePCD();
+  void printImageStats();
   void processImu();
   
   bool sync_packages(LidarMeasureGroup &meas);
@@ -55,7 +57,7 @@ public:
   void livox_pcl_cbk(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg_in);
   void imu_cbk(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in);
   void img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in, int cam_idx);
-  void publish_img_rgb(const image_transport::Publisher &pubImage, VIOManagerPtr vio_manager);
+  void publish_img_rgb(int cam_idx, VIOManagerPtr vio_manager);
   void publish_frame_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudFullRes, VIOManagerPtr vio_manager);
   void publish_visual_sub_map(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubSubVisualMap);
   void publish_effect_world(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pubLaserCloudEffect, const std::vector<PointToPlane> &ptpl_list);
@@ -95,6 +97,11 @@ public:
   {
     std::deque<CameraImageEntry> queue;
     double last_timestamp_img = -1.0;
+    uint64_t recv_count = 0;
+    uint64_t dropped_before_lidar = 0;
+    uint64_t dropped_duplicate = 0;
+    uint64_t dropped_loopback = 0;
+    uint64_t dropped_timejump = 0;
     uint64_t dropped_overflow = 0;
     uint64_t dropped_old = 0;
     uint64_t dropped_stale = 0;
@@ -151,6 +158,9 @@ public:
   double gyr_cov = 0, acc_cov = 0, inv_expo_cov = 0;
   double blind_rgb_points = 0.0;
   double last_timestamp_lidar = -1.0, last_timestamp_imu = -1.0, last_timestamp_img = -1.0;
+  uint64_t lidar_recv_count = 0;
+  uint64_t imu_recv_count = 0;
+  std::chrono::steady_clock::time_point last_image_stats_time = std::chrono::steady_clock::time_point::min();
   double filter_size_surf_min = 0;
   double filter_size_pcd = 0;
   double _first_lidar_time = 0.0;
@@ -211,7 +221,7 @@ public:
   PointCloudXYZRGB::Ptr pcl_wait_save;
   PointCloudXYZI::Ptr pcl_wait_save_intensity;
 
-  ofstream fout_pre, fout_out, fout_pcd_pos, fout_points, fout_pose_tum;
+  ofstream fout_pre, fout_out, fout_pcd_pos, fout_points, fout_pose_tum, fout_selected;
 
   pcl::VoxelGrid<PointType> downSizeFilterSurf;
 
@@ -246,7 +256,7 @@ public:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudDyn;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudDynRmed;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudDynDbg;
-  image_transport::Publisher pubImage;
+  std::vector<image_transport::Publisher> pubImage;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr mavros_pose_publisher;
   rclcpp::TimerBase::SharedPtr imu_prop_timer;
   rclcpp::Node::SharedPtr node;
