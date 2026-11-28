@@ -122,6 +122,10 @@ public:
 
   Eigen::Matrix<double, DIM_STATE, DIM_STATE> G, H_T_H;
   Eigen::MatrixXd K, H_sub_inv;
+  // [diag] information matrix H^T R^-1 H (R = img_point_cov * I, pose block, order: rot(3), pos(3))
+  // of the last accepted EKF iteration of the last processed frame (finest pyramid level). Diagnostics only.
+  Eigen::Matrix<double, 6, 6> last_vis_info_ = Eigen::Matrix<double, 6, 6>::Zero();
+  bool last_vis_info_valid_ = false;
 
   ofstream fout_camera, fout_colmap;
   unordered_map<VOXEL_LOCATION, VOXEL_POINTS *> feat_map;

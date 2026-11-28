@@ -787,6 +787,8 @@ void VIOManager::computeJacobianAndUpdateEKF(cv::Mat img)
   if (total_points == 0) return;
   
   compute_jacobian_time = update_ekf_time = 0.0;
+  last_vis_info_.setZero();  // [diag] reset per frame
+  last_vis_info_valid_ = false;
 
   for (int level = patch_pyrimid_level - 1; level >= 0; level--)
   {
@@ -1495,6 +1497,8 @@ void VIOManager::updateStateInverse(cv::Mat img, int level)
       H_T_H.setZero();
       G.setZero();
       H_T_H.block<6, 6>(0, 0) = H_sub_T * H_sub;
+      last_vis_info_ = H_T_H.block<6, 6>(0, 0) / img_point_cov;  // [diag] copy only
+      last_vis_info_valid_ = true;
       MD(DIM_STATE, DIM_STATE) &&K_1 = (H_T_H + (state->cov / img_point_cov).inverse()).inverse();
       auto &&HTz = H_sub_T * z;
       auto vec = (*state_propagat) - (*state);
@@ -1659,6 +1663,8 @@ void VIOManager::updateState(cv::Mat img, int level)
       H_T_H.setZero();
       G.setZero();
       H_T_H.block<7, 7>(0, 0) = H_sub_T * H_sub;
+      last_vis_info_ = H_T_H.block<6, 6>(0, 0) / img_point_cov;  // [diag] copy only (exposure column excluded)
+      last_vis_info_valid_ = true;
       MD(DIM_STATE, DIM_STATE) &&K_1 = (H_T_H + (state->cov / img_point_cov).inverse()).inverse();
       auto &&HTz = H_sub_T * z;
       // K = K_1.block<DIM_STATE,6>(0,0) * H_sub_T;

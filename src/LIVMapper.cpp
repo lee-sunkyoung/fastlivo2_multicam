@@ -57,6 +57,10 @@ LIVMapper::~LIVMapper() {
   if (fout_selected.is_open()) {
     fout_selected.close();
   }
+  if (fout_drops.is_open()) fout_drops.close();
+  if (fout_timing.is_open()) fout_timing.close();
+  if (fout_lio_eig.is_open()) fout_lio_eig.close();
+  if (fout_vis_info.is_open()) fout_vis_info.close();
 }
 
 void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
@@ -85,6 +89,10 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   try_declare.template operator()<int>("common.camera_count", 1);
   try_declare.template operator()<int>("common.camera_queue_max", 3);
   try_declare.template operator()<bool>("common.single_vio_manager_mode", true);
+  try_declare.template operator()<double>("common.forced_drop_ratio", 0.0);
+  try_declare.template operator()<int>("common.forced_drop_seed", 0);
+  try_declare.template operator()<bool>("diag_log.drop_timing_en", false);
+  try_declare.template operator()<bool>("diag_log.degeneracy_en", false);
 
 
   try_declare.template operator()<bool>("vio.normal_en", true);
@@ -149,6 +157,14 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   this->node->get_parameter("common.camera_count", camera_count);
   this->node->get_parameter("common.camera_queue_max", camera_queue_max);
   this->node->get_parameter("common.single_vio_manager_mode", single_vio_manager_mode);
+  this->node->get_parameter("common.forced_drop_ratio", forced_drop_ratio);
+  this->node->get_parameter("common.forced_drop_seed", forced_drop_seed);
+  this->node->get_parameter("diag_log.drop_timing_en", diag_drop_timing_en);
+  this->node->get_parameter("diag_log.degeneracy_en", diag_degeneracy_en);
+  if (forced_drop_ratio < 0.0) forced_drop_ratio = 0.0;
+  if (forced_drop_ratio > 1.0) forced_drop_ratio = 1.0;
+  RCLCPP_INFO(this->node->get_logger(), "[diag] forced_drop_ratio=%.3f seed=%d drop_timing_log=%d degeneracy_log=%d",
+              forced_drop_ratio, forced_drop_seed, (int)diag_drop_timing_en, (int)diag_degeneracy_en);
 
   this->node->get_parameter("vio.normal_en", normal_en);
   this->node->get_parameter("vio.inverse_composition_en", inverse_composition_en);
@@ -476,15 +492,32 @@ void LIVMapper::initializeFiles()
   }
   if(colmap_output_en) fout_points.open(std::string(ROOT_DIR) + "Log/Colmap/sparse/0/points3D.txt", std::ios::out);
   if(pcd_save_interval > 0) fout_pcd_pos.open(std::string(ROOT_DIR) + "Log/PCD/scans_pos.json", std::ios::out);
-  std::time_t now = std::time(nullptr);
-  std::tm now_tm = *std::localtime(&now);
-  char filename_buf[64];
-  std::strftime(filename_buf, sizeof(filename_buf), "%Y%m%d_%H%M%S", &now_tm);
-  const std::string selected_csv_path = std::string(ROOT_DIR) + "Log/selected_" + filename_buf + ".csv";
+  // Selected-frame csv is named after evo.seq_name (same as the trajectory file Log/result/<seq_name>.txt).
+  const std::string log_prefix = std::string(ROOT_DIR) + "Log/" + seq_name;
+  const std::string selected_csv_path = log_prefix + ".csv";
   fout_selected.open(selected_csv_path, std::ios::out);
   if (fout_selected.is_open()) {
-    fout_selected << "cam,capture_time,last_lio_update_time\n";
+    fout_selected << "cam,capture_time,last_lio_update_time,wall_age_ms,horizon_time\n";
     fout_selected.flush();
+  }
+  if (diag_drop_timing_en)
+  {
+    fout_drops.open(log_prefix + "_drops.csv", std::ios::out);
+    fout_drops << "reason,cam,capture_time,wall_age_ms,data_lag_s,last_lio_update_time\n";
+    fout_timing.open(log_prefix + "_timing.csv", std::ios::out);
+    fout_timing << "type,cam,sensor_time,proc_ms,arrival_to_start_ms,n_feat\n";
+  }
+  if (diag_degeneracy_en)
+  {
+    fout_lio_eig.open(log_prefix + "_lio_eig.csv", std::ios::out);
+    fout_lio_eig << "t,px,py,pz,n_eff,"
+                    "e0,e1,e2,e3,e4,e5,v0,v1,v2,v3,v4,v5,cond6,"
+                    "et0,et1,et2,vt0,vt1,vt2,cond_t,"
+                    "er0,er1,er2,vr0,vr1,vr2,cond_r,"
+                    "schur_t_min,vs0,vs1,vs2\n";
+    fout_vis_info.open(log_prefix + "_vis_info.csv", std::ios::out);
+    fout_vis_info << "t,cam,valid,n_points,lio_min_trans_eig,proj_vis_on_lio_vt,lio_schur_min,proj_vis_on_lio_vs,"
+                     "vis_et0,vis_et1,vis_et2,vis_vt0,vis_vt1,vis_vt2,lio_vt0,lio_vt1,lio_vt2\n";
   }
   fout_pre.open(DEBUG_FILE_DIR("mat_pre.txt"), std::ios::out);
   fout_out.open(DEBUG_FILE_DIR("mat_out.txt"), std::ios::out);
@@ -656,6 +689,12 @@ void LIVMapper::handleVIO()
               arrival_to_vio_start_ms,
               vio_proc_time_ms,
               arrival_to_vio_end_ms);
+  if (fout_timing.is_open())
+  {
+    fout_timing << "VIO," << cam_idx << "," << std::fixed << std::setprecision(6) << LidarMeasures.last_lio_update_time << ","
+                << std::setprecision(3) << vio_proc_time_ms << "," << arrival_to_vio_start_ms << "," << selected_vio_manager->total_points << "\n";
+  }
+  if (diag_degeneracy_en) logVisInfo(cam_idx, selected_vio_manager);
 
   if (imu_prop_enable) 
   {
@@ -723,6 +762,7 @@ void LIVMapper::handleLIO()
   voxelmap_manager->StateEstimation(state_propagat);
   _state = voxelmap_manager->state_;
   _pv_list = voxelmap_manager->pv_list_;
+  if (diag_degeneracy_en) logLioEigen();
 
   double t2 = omp_get_wtime();
 
@@ -808,6 +848,11 @@ void LIVMapper::handleLIO()
 
   frame_num++;
   aver_time_consu = aver_time_consu * (frame_num - 1) / frame_num + (t4 - t0) / frame_num;
+  if (fout_timing.is_open())
+  {
+    fout_timing << "LIO,-1," << std::fixed << std::setprecision(6) << LidarMeasures.last_lio_update_time << ","
+                << std::setprecision(3) << (t4 - t0) * 1000.0 << ",," << voxelmap_manager->effct_feat_num_ << "\n";
+  }
 
   // aver_time_icp = aver_time_icp * (frame_num - 1) / frame_num + (t2 - t1) / frame_num;
   // aver_time_map_inre = aver_time_map_inre * (frame_num - 1) / frame_num + (t4 - t3) / frame_num;
@@ -898,6 +943,11 @@ void LIVMapper::printImageStats()
     const uint64_t used = st.use_count;
     const double used_ratio = recv > 0 ? (100.0 * static_cast<double>(used) / static_cast<double>(recv)) : 0.0;
     const double old_ratio = recv > 0 ? (100.0 * static_cast<double>(st.dropped_old) / static_cast<double>(recv)) : 0.0;
+    const uint64_t eligible = recv > st.dropped_before_lidar ? recv - st.dropped_before_lidar : 0;
+    const double total_drop_ratio = eligible > 0 ? (100.0 * static_cast<double>(eligible - std::min(eligible, used)) / static_cast<double>(eligible)) : 0.0;
+    RCLCPP_INFO(this->node->get_logger(), "[img_stats] cam%d forced=%llu total_drop=%.2f%% (eligible=%llu, forced_drop_ratio=%.2f)",
+                cam, static_cast<unsigned long long>(st.dropped_forced), total_drop_ratio,
+                static_cast<unsigned long long>(eligible), forced_drop_ratio);
     RCLCPP_INFO(this->node->get_logger(),
                 "[img_stats] cam%d recv=%llu used=%llu(%.1f%%) | skipped(old)=%llu(%.1f%%) stale=%llu overflow=%llu dup=%llu loop=%llu jump=%llu before_lidar=%llu cv=%llu",
                 cam,
@@ -947,7 +997,14 @@ void LIVMapper::run(rclcpp::Node::SharedPtr &node)
     stateEstimationAndMapping();
   }
   printImageStats();
+  if (diag_drop_timing_en) writeRunStats();
+  if (fout_selected.is_open()) fout_selected.flush();
+  if (fout_drops.is_open()) fout_drops.flush();
+  if (fout_timing.is_open()) fout_timing.flush();
+  if (fout_lio_eig.is_open()) fout_lio_eig.flush();
+  if (fout_vis_info.is_open()) fout_vis_info.flush();
   savePCD();
+  std::cout << "[diag] run finished, logs flushed, pcd saved" << std::endl;
 }
 
 void LIVMapper::prop_imu_once(StatesGroup &imu_prop_state, const double dt, V3D acc_avr, V3D angvel_avr)
@@ -1314,6 +1371,7 @@ void LIVMapper::img_cbk(const sensor_msgs::msg::Image::ConstSharedPtr &msg_in,in
   // Remove the oldest frames when the camera queue exceeds its size limit.
   while (static_cast<int>(cam_state.queue.size()) > camera_queue_max)
   {
+    if (fout_drops.is_open()) logDropEvent("overflow", cam_idx, cam_state.queue.front(), msg_header_time - cam_state.queue.front().capture_time, entry.received_time);
     cam_state.queue.pop_front();
     cam_state.dropped_overflow++;
   }
@@ -1496,6 +1554,12 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
             if (synced_capture_time <= meas.last_lio_update_time + stale_eps)
             {
               const int stale_drop_num = latest_ready_idx + 1;
+              if (fout_drops.is_open())
+              {
+                const auto now_tp = std::chrono::steady_clock::now();
+                for (int k = 0; k < stale_drop_num; ++k)
+                  logDropEvent("stale", cam, cam_state.queue[k], horizon_time - cam_state.queue[k].capture_time, now_tp);
+              }
               cam_state.queue.erase(cam_state.queue.begin(), cam_state.queue.begin() + stale_drop_num);
               cam_state.dropped_stale += stale_drop_num;
               fail_stale_dropped[cam] += stale_drop_num;
@@ -1522,9 +1586,27 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 
           auto &best_state = camera_queue_states[best_cam];
           CameraImageEntry selected_entry = best_state.queue[best_idx];
+          const auto sel_now = std::chrono::steady_clock::now();
+          if (fout_drops.is_open())
+          {
+            for (int k = 0; k < best_idx; ++k)
+              logDropEvent("old", best_cam, best_state.queue[k], horizon_time - best_state.queue[k].capture_time, sel_now);
+          }
+          // [diag] artificial drop of a frame that would otherwise be used (default ratio 0 -> never taken)
+          if (forced_drop_ratio > 0.0 && forcedDrop(selected_entry.capture_time, best_cam))
+          {
+            if (fout_drops.is_open()) logDropEvent("forced", best_cam, selected_entry, horizon_time - selected_entry.capture_time, sel_now);
+            best_state.queue.erase(best_state.queue.begin(), best_state.queue.begin() + best_idx + 1);
+            best_state.dropped_old += best_idx;
+            best_state.dropped_forced++;
+            mtx_buffer.unlock();
+            continue;
+          }
           if (fout_selected.is_open())
           {
-            fout_selected << best_cam << "," << std::fixed << std::setprecision(6) << selected_entry.capture_time << "," << meas.last_lio_update_time << "\n";
+            fout_selected << best_cam << "," << std::fixed << std::setprecision(6) << selected_entry.capture_time << "," << meas.last_lio_update_time
+                          << "," << std::setprecision(3) << std::chrono::duration<double, std::milli>(sel_now - selected_entry.received_time).count()
+                          << "," << std::setprecision(6) << horizon_time << "\n";
             fout_selected.flush();
           }
           const int old_drop_num = best_idx;
@@ -1933,4 +2015,111 @@ void LIVMapper::publish_path(const rclcpp::Publisher<nav_msgs::msg::Path>::Share
   msg_body_pose.header.frame_id = "camera_init";
   path.poses.push_back(msg_body_pose);
   pubPath->publish(path);
+}
+
+
+// ============================ [diag] instrumentation ============================
+static inline uint64_t diag_splitmix64(uint64_t x)
+{
+  x += 0x9E3779B97F4A7C15ULL;
+  x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
+  x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
+  return x ^ (x >> 31);
+}
+
+// Deterministic drop decision: hash(image timestamp [us], camera id, run index) -> u in [0,1).
+// Independent of call order, so a frame gets the same decision in every run with the same seed.
+// For the same seed, frames dropped at ratio r1 are a subset of those dropped at r2 > r1.
+bool LIVMapper::forcedDrop(double capture_time, int cam_idx) const
+{
+  const int64_t t_us = static_cast<int64_t>(std::llround(capture_time * 1e6));
+  uint64_t h = diag_splitmix64(static_cast<uint64_t>(t_us));
+  h = diag_splitmix64(h ^ (static_cast<uint64_t>(cam_idx) * 0x632BE59BD9B4E019ULL));
+  h = diag_splitmix64(h ^ (static_cast<uint64_t>(static_cast<uint32_t>(forced_drop_seed)) * 0x85EBCA77C2B2AE63ULL));
+  const double u = static_cast<double>(h >> 11) * (1.0 / 9007199254740992.0);
+  return u < forced_drop_ratio;
+}
+
+void LIVMapper::logDropEvent(const char *reason, int cam_idx, const CameraImageEntry &e, double data_lag_s, std::chrono::steady_clock::time_point now)
+{
+  if (!fout_drops.is_open()) return;
+  fout_drops << reason << "," << cam_idx << "," << std::fixed << std::setprecision(6) << e.capture_time << ","
+             << std::setprecision(3) << std::chrono::duration<double, std::milli>(now - e.received_time).count() << ","
+             << std::setprecision(6) << data_lag_s << "," << LidarMeasures.last_lio_update_time << "\n";
+}
+
+void LIVMapper::logLioEigen()
+{
+  lio_eig_valid = false;
+  if (!fout_lio_eig.is_open() || !voxelmap_manager->last_HTH_valid_) return;
+  const Eigen::Matrix<double, 6, 6> H = 0.5 * (voxelmap_manager->last_HTH_ + voxelmap_manager->last_HTH_.transpose());
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> es6(H);
+  const M3D Hrr = H.block<3, 3>(0, 0), Htt = H.block<3, 3>(3, 3), Hrt = H.block<3, 3>(0, 3);
+  Eigen::SelfAdjointEigenSolver<M3D> est(Htt), esr(Hrr);
+  // translation information after marginalising rotation (Schur complement), extra diagnostic
+  M3D S = Htt;
+  const double det_rr = Hrr.determinant();
+  if (std::abs(det_rr) > 1e-12) S = Htt - Hrt.transpose() * Hrr.inverse() * Hrt;
+  S = 0.5 * (S + S.transpose());
+  Eigen::SelfAdjointEigenSolver<M3D> ess(S);
+  auto cond = [](double mx, double mn) { return mn > 1e-12 ? mx / mn : std::numeric_limits<double>::infinity(); };
+  const auto &e6 = es6.eigenvalues(); const auto &et = est.eigenvalues(); const auto &er = esr.eigenvalues();
+  const Eigen::Matrix<double, 6, 1> v6 = es6.eigenvectors().col(0);
+  const V3D vt = est.eigenvectors().col(0), vr = esr.eigenvectors().col(0), vs = ess.eigenvectors().col(0);
+  fout_lio_eig << std::fixed << std::setprecision(6) << LidarMeasures.last_lio_update_time << ","
+               << _state.pos_end[0] << "," << _state.pos_end[1] << "," << _state.pos_end[2] << "," << voxelmap_manager->effct_feat_num_
+               << std::setprecision(6) << std::scientific;
+  for (int i = 0; i < 6; ++i) fout_lio_eig << "," << e6[i];
+  for (int i = 0; i < 6; ++i) fout_lio_eig << "," << v6[i];
+  fout_lio_eig << "," << cond(e6[5], e6[0]);
+  for (int i = 0; i < 3; ++i) fout_lio_eig << "," << et[i];
+  for (int i = 0; i < 3; ++i) fout_lio_eig << "," << vt[i];
+  fout_lio_eig << "," << cond(et[2], et[0]);
+  for (int i = 0; i < 3; ++i) fout_lio_eig << "," << er[i];
+  for (int i = 0; i < 3; ++i) fout_lio_eig << "," << vr[i];
+  fout_lio_eig << "," << cond(er[2], er[0]);
+  fout_lio_eig << "," << ess.eigenvalues()[0];
+  for (int i = 0; i < 3; ++i) fout_lio_eig << "," << vs[i];
+  fout_lio_eig << std::fixed << "\n";
+  lio_eig_valid = true;
+  lio_eig_time = LidarMeasures.last_lio_update_time;
+  lio_min_trans_eig = et[0];
+  lio_min_trans_vec = vt;
+  lio_schur_min_eig = ess.eigenvalues()[0];
+  lio_schur_min_vec = vs;
+}
+
+void LIVMapper::logVisInfo(int cam_idx, const VIOManagerPtr &mgr)
+{
+  if (!fout_vis_info.is_open() || !mgr) return;
+  const bool valid = mgr->last_vis_info_valid_ && lio_eig_valid;
+  M3D Ht = 0.5 * (mgr->last_vis_info_.block<3, 3>(3, 3) + mgr->last_vis_info_.block<3, 3>(3, 3).transpose());
+  Eigen::SelfAdjointEigenSolver<M3D> es(Ht);
+  const double proj_t = lio_min_trans_vec.dot(Ht * lio_min_trans_vec);
+  const double proj_s = lio_schur_min_vec.dot(Ht * lio_schur_min_vec);
+  fout_vis_info << std::fixed << std::setprecision(6) << LidarMeasures.last_lio_update_time << "," << cam_idx << "," << (valid ? 1 : 0) << ","
+                << mgr->total_points << std::scientific << std::setprecision(6) << "," << lio_min_trans_eig << "," << proj_t << ","
+                << lio_schur_min_eig << "," << proj_s;
+  for (int i = 0; i < 3; ++i) fout_vis_info << "," << es.eigenvalues()[i];
+  for (int i = 0; i < 3; ++i) fout_vis_info << "," << es.eigenvectors().col(0)[i];
+  for (int i = 0; i < 3; ++i) fout_vis_info << "," << lio_min_trans_vec[i];
+  fout_vis_info << std::fixed << "\n";
+}
+
+void LIVMapper::writeRunStats()
+{
+  std::ofstream f(std::string(ROOT_DIR) + "Log/" + seq_name + "_img_stats.csv", std::ios::out);
+  if (!f.is_open()) return;
+  f << "cam,recv,used,skipped_old,stale,overflow,forced,dup,loop,jump,before_lidar,cv,eligible,used_ratio,total_drop_ratio,forced_drop_ratio_param,forced_drop_seed\n";
+  for (int cam = 0; cam < camera_count; ++cam)
+  {
+    const auto &st = camera_queue_states[cam];
+    const uint64_t eligible = st.recv_count > st.dropped_before_lidar ? st.recv_count - st.dropped_before_lidar : 0;
+    const double used_ratio = eligible > 0 ? static_cast<double>(st.use_count) / static_cast<double>(eligible) : 0.0;
+    f << cam << "," << st.recv_count << "," << st.use_count << "," << st.dropped_old << "," << st.dropped_stale << "," << st.dropped_overflow << ","
+      << st.dropped_forced << "," << st.dropped_duplicate << "," << st.dropped_loopback << "," << st.dropped_timejump << ","
+      << st.dropped_before_lidar << "," << st.dropped_convert_fail << "," << eligible << "," << std::fixed << std::setprecision(6) << used_ratio << ","
+      << (1.0 - used_ratio) << "," << forced_drop_ratio << "," << forced_drop_seed << "\n";
+  }
+  f << "# lidar_recv=" << lidar_recv_count << " imu_recv=" << imu_recv_count << "\n";
 }

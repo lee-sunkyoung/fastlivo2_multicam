@@ -212,6 +212,10 @@ public:
 
   int feats_down_size_;
   int effct_feat_num_;
+  // [diag] weighted information matrix H^T R^-1 H (pose block, order: rot(3), pos(3)) of the last LIO iteration.
+  // Copied only for diagnostics; never fed back into the estimator.
+  Eigen::Matrix<double, 6, 6> last_HTH_ = Eigen::Matrix<double, 6, 6>::Zero();
+  bool last_HTH_valid_ = false;
   std::vector<M3D> cross_mat_list_;
   std::vector<M3D> body_cov_list_;
   std::vector<pointWithVar> pv_list_;

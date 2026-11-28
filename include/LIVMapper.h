@@ -106,6 +106,7 @@ public:
     uint64_t dropped_old = 0;
     uint64_t dropped_stale = 0;
     uint64_t dropped_convert_fail = 0;
+    uint64_t dropped_forced = 0;   // [diag] artificial drop (common.forced_drop_ratio)
     uint64_t use_count = 0;
   };
 
@@ -267,5 +268,24 @@ public:
   double aver_time_icp = 0;
   double aver_time_map_inre = 0;
   bool colmap_output_en = false;
+
+  // ---------------- [diag] experiment instrumentation (all default off) ----------------
+  // common.forced_drop_ratio: extra drop of frames that would otherwise be used (0.0 = original behaviour)
+  // common.forced_drop_seed : run index mixed into the hash so each repetition drops a different, reproducible set
+  double forced_drop_ratio = 0.0;
+  int forced_drop_seed = 0;
+  bool diag_drop_timing_en = false;   // diag_log.drop_timing_en : drop events / per-frame timing / run stats csv
+  bool diag_degeneracy_en = false;    // diag_log.degeneracy_en  : LIO H^T R^-1 H eigen csv + VIO info projection csv
+  ofstream fout_drops, fout_timing, fout_lio_eig, fout_vis_info;
+  bool lio_eig_valid = false;
+  double lio_eig_time = -1.0;
+  double lio_min_trans_eig = 0.0, lio_schur_min_eig = 0.0;
+  V3D lio_min_trans_vec = V3D::Zero();
+  V3D lio_schur_min_vec = V3D::Zero();
+  bool forcedDrop(double capture_time, int cam_idx) const;
+  void logDropEvent(const char *reason, int cam_idx, const CameraImageEntry &e, double data_lag_s, std::chrono::steady_clock::time_point now);
+  void logLioEigen();
+  void logVisInfo(int cam_idx, const VIOManagerPtr &mgr);
+  void writeRunStats();
 };
 #endif
