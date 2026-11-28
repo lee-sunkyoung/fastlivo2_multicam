@@ -784,11 +784,11 @@ void VIOManager::retrieveFromVisualSparseMap(cv::Mat img, vector<pointWithVar> &
 
 void VIOManager::computeJacobianAndUpdateEKF(cv::Mat img)
 {
-  if (total_points == 0) return;
-  
-  compute_jacobian_time = update_ekf_time = 0.0;
-  last_vis_info_.setZero();  // [diag] reset per frame
+  last_vis_info_.setZero();  // [diag] reset per frame (before the early return so a frame without points is logged invalid)
   last_vis_info_valid_ = false;
+  if (total_points == 0) return;
+
+  compute_jacobian_time = update_ekf_time = 0.0;
 
   for (int level = patch_pyrimid_level - 1; level >= 0; level--)
   {
