@@ -1,0 +1,22 @@
+[2026-11-28 08:30:28] plan: ['mainlab_both_6', 'mainlab_both_diag_6', 'mainlab_both_7', 'mainlab_both_diag_7', 'mainlab_both_8', 'mainlab_both_diag_8', 'mainlab_both_9', 'mainlab_both_diag_9', 'mainlab_both_10', 'mainlab_both_diag_10']
+[2026-11-28 08:30:28] RUN  mainlab_both_6  (bag 223s)
+[2026-11-28 08:34:09] DONE mainlab_both_6: complete stop=sigint moved=['mainlab_both_6.txt', 'mainlab_both_6.csv', 'mainlab_both_6_drops.csv', 'mainlab_both_6_img_stats.csv', 'mainlab_both_6_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:34:09] RUN  mainlab_both_diag_6  (bag 223s)
+[2026-11-28 08:37:50] DONE mainlab_both_diag_6: complete stop=sigint moved=['mainlab_both_diag_6.txt', 'mainlab_both_diag_6.csv', 'mainlab_both_diag_6_drops.csv', 'mainlab_both_diag_6_lio_eig.csv', 'mainlab_both_diag_6_img_stats.csv', 'mainlab_both_diag_6_vis_info.csv', 'mainlab_both_diag_6_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:37:50] RUN  mainlab_both_7  (bag 223s)
+[2026-11-28 08:41:31] DONE mainlab_both_7: complete stop=sigint moved=['mainlab_both_7.txt', 'mainlab_both_7.csv', 'mainlab_both_7_img_stats.csv', 'mainlab_both_7_drops.csv', 'mainlab_both_7_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:41:31] RUN  mainlab_both_diag_7  (bag 223s)
+[2026-11-28 08:45:12] DONE mainlab_both_diag_7: complete stop=sigint moved=['mainlab_both_diag_7.txt', 'mainlab_both_diag_7.csv', 'mainlab_both_diag_7_img_stats.csv', 'mainlab_both_diag_7_lio_eig.csv', 'mainlab_both_diag_7_timing.csv', 'mainlab_both_diag_7_vis_info.csv', 'mainlab_both_diag_7_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:45:12] RUN  mainlab_both_8  (bag 223s)
+[2026-11-28 08:48:53] DONE mainlab_both_8: complete stop=sigint moved=['mainlab_both_8.txt', 'mainlab_both_8.csv', 'mainlab_both_8_drops.csv', 'mainlab_both_8_timing.csv', 'mainlab_both_8_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:48:53] RUN  mainlab_both_diag_8  (bag 223s)
+[2026-11-28 08:52:34] DONE mainlab_both_diag_8: complete stop=sigint moved=['mainlab_both_diag_8.txt', 'mainlab_both_diag_8.csv', 'mainlab_both_diag_8_timing.csv', 'mainlab_both_diag_8_img_stats.csv', 'mainlab_both_diag_8_lio_eig.csv', 'mainlab_both_diag_8_drops.csv', 'mainlab_both_diag_8_vis_info.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:52:34] RUN  mainlab_both_9  (bag 223s)
+[2026-11-28 08:56:15] DONE mainlab_both_9: complete stop=sigint moved=['mainlab_both_9.txt', 'mainlab_both_9.csv', 'mainlab_both_9_img_stats.csv', 'mainlab_both_9_timing.csv', 'mainlab_both_9_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:56:15] RUN  mainlab_both_diag_9  (bag 223s)
+[2026-11-28 08:59:56] DONE mainlab_both_diag_9: complete stop=sigint moved=['mainlab_both_diag_9.txt', 'mainlab_both_diag_9.csv', 'mainlab_both_diag_9_vis_info.csv', 'mainlab_both_diag_9_drops.csv', 'mainlab_both_diag_9_timing.csv', 'mainlab_both_diag_9_img_stats.csv', 'mainlab_both_diag_9_lio_eig.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:59:56] RUN  mainlab_both_10  (bag 223s)
+[2026-11-28 09:03:37] DONE mainlab_both_10: complete stop=sigint moved=['mainlab_both_10.txt', 'mainlab_both_10.csv', 'mainlab_both_10_img_stats.csv', 'mainlab_both_10_timing.csv', 'mainlab_both_10_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 09:03:37] RUN  mainlab_both_diag_10  (bag 223s)
+[2026-11-28 09:07:19] DONE mainlab_both_diag_10: complete stop=sigint moved=['mainlab_both_diag_10.txt', 'mainlab_both_diag_10.csv', 'mainlab_both_diag_10_drops.csv', 'mainlab_both_diag_10_img_stats.csv', 'mainlab_both_diag_10_vis_info.csv', 'mainlab_both_diag_10_timing.csv', 'mainlab_both_diag_10_lio_eig.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 09:07:19] batch finished: {'mainlab_both_6': 'complete', 'mainlab_both_diag_6': 'complete', 'mainlab_both_7': 'complete', 'mainlab_both_diag_7': 'complete', 'mainlab_both_8': 'complete', 'mainlab_both_diag_8': 'complete', 'mainlab_both_9': 'complete', 'mainlab_both_diag_9': 'complete', 'mainlab_both_10': 'complete', 'mainlab_both_diag_10': 'complete'}

@@ -1,0 +1,24 @@
+[2026-11-28 07:33:57] plan: ['mainlab_both_diag_1', 'mainlab_both_diag_2', 'mainlab_both_diag_3', 'mainlab_both_diag_4', 'mainlab_both_diag_5']
+[2026-11-28 07:33:57] RUN  mainlab_both_diag_1  (bag 223s)
+[2026-11-28 07:37:39] DONE mainlab_both_diag_1: complete stop=sigint moved=['mainlab_both_diag_1.txt', 'mainlab_both_diag_1.csv', 'mainlab_both_diag_1_timing.csv', 'mainlab_both_diag_1_img_stats.csv', 'mainlab_both_diag_1_vis_info.csv', 'mainlab_both_diag_1_lio_eig.csv', 'mainlab_both_diag_1_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:37:39] RUN  mainlab_both_diag_2  (bag 223s)
+[2026-11-28 07:41:20] DONE mainlab_both_diag_2: complete stop=sigint moved=['mainlab_both_diag_2.txt', 'mainlab_both_diag_2.csv', 'mainlab_both_diag_2_timing.csv', 'mainlab_both_diag_2_lio_eig.csv', 'mainlab_both_diag_2_img_stats.csv', 'mainlab_both_diag_2_drops.csv', 'mainlab_both_diag_2_vis_info.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:41:20] RUN  mainlab_both_diag_3  (bag 223s)
+[2026-11-28 07:45:01] DONE mainlab_both_diag_3: complete stop=sigint moved=['mainlab_both_diag_3.txt', 'mainlab_both_diag_3.csv', 'mainlab_both_diag_3_timing.csv', 'mainlab_both_diag_3_img_stats.csv', 'mainlab_both_diag_3_vis_info.csv', 'mainlab_both_diag_3_drops.csv', 'mainlab_both_diag_3_lio_eig.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:45:01] RUN  mainlab_both_diag_4  (bag 223s)
+[2026-11-28 07:48:42] DONE mainlab_both_diag_4: complete stop=sigint moved=['mainlab_both_diag_4.txt', 'mainlab_both_diag_4.csv', 'mainlab_both_diag_4_vis_info.csv', 'mainlab_both_diag_4_timing.csv', 'mainlab_both_diag_4_img_stats.csv', 'mainlab_both_diag_4_lio_eig.csv', 'mainlab_both_diag_4_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:48:42] RUN  mainlab_both_diag_5  (bag 223s)
+[2026-11-28 07:52:23] DONE mainlab_both_diag_5: complete stop=sigint moved=['mainlab_both_diag_5.txt', 'mainlab_both_diag_5.csv', 'mainlab_both_diag_5_drops.csv', 'mainlab_both_diag_5_vis_info.csv', 'mainlab_both_diag_5_timing.csv', 'mainlab_both_diag_5_img_stats.csv', 'mainlab_both_diag_5_lio_eig.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:52:23] batch finished: {'mainlab_both_diag_1': 'complete', 'mainlab_both_diag_2': 'complete', 'mainlab_both_diag_3': 'complete', 'mainlab_both_diag_4': 'complete', 'mainlab_both_diag_5': 'complete'}
+[2026-11-28 07:52:23] plan: ['2ndfloor_both_diag_1', '2ndfloor_both_diag_2', '2ndfloor_both_diag_3', '2ndfloor_both_diag_4', '2ndfloor_both_diag_5']
+[2026-11-28 07:52:23] RUN  2ndfloor_both_diag_1  (bag 295s)
+[2026-11-28 07:57:30] DONE 2ndfloor_both_diag_1: complete stop=sigint moved=['2ndfloor_both_diag_1.txt', '2ndfloor_both_diag_1.csv', '2ndfloor_both_diag_1_vis_info.csv', '2ndfloor_both_diag_1_timing.csv', '2ndfloor_both_diag_1_lio_eig.csv', '2ndfloor_both_diag_1_drops.csv', '2ndfloor_both_diag_1_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:57:30] RUN  2ndfloor_both_diag_2  (bag 295s)
+[2026-11-28 08:02:36] DONE 2ndfloor_both_diag_2: complete stop=sigint moved=['2ndfloor_both_diag_2.txt', '2ndfloor_both_diag_2.csv', '2ndfloor_both_diag_2_vis_info.csv', '2ndfloor_both_diag_2_drops.csv', '2ndfloor_both_diag_2_timing.csv', '2ndfloor_both_diag_2_lio_eig.csv', '2ndfloor_both_diag_2_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:02:36] RUN  2ndfloor_both_diag_3  (bag 295s)
+[2026-11-28 08:07:42] DONE 2ndfloor_both_diag_3: complete stop=sigint moved=['2ndfloor_both_diag_3.txt', '2ndfloor_both_diag_3.csv', '2ndfloor_both_diag_3_timing.csv', '2ndfloor_both_diag_3_lio_eig.csv', '2ndfloor_both_diag_3_vis_info.csv', '2ndfloor_both_diag_3_drops.csv', '2ndfloor_both_diag_3_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:07:42] RUN  2ndfloor_both_diag_4  (bag 295s)
+[2026-11-28 08:12:49] DONE 2ndfloor_both_diag_4: complete stop=sigint moved=['2ndfloor_both_diag_4.txt', '2ndfloor_both_diag_4.csv', '2ndfloor_both_diag_4_drops.csv', '2ndfloor_both_diag_4_vis_info.csv', '2ndfloor_both_diag_4_timing.csv', '2ndfloor_both_diag_4_img_stats.csv', '2ndfloor_both_diag_4_lio_eig.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:12:49] RUN  2ndfloor_both_diag_5  (bag 295s)
+[2026-11-28 08:17:55] DONE 2ndfloor_both_diag_5: complete stop=sigint moved=['2ndfloor_both_diag_5.txt', '2ndfloor_both_diag_5.csv', '2ndfloor_both_diag_5_vis_info.csv', '2ndfloor_both_diag_5_lio_eig.csv', '2ndfloor_both_diag_5_drops.csv', '2ndfloor_both_diag_5_img_stats.csv', '2ndfloor_both_diag_5_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:17:55] batch finished: {'2ndfloor_both_diag_1': 'complete', '2ndfloor_both_diag_2': 'complete', '2ndfloor_both_diag_3': 'complete', '2ndfloor_both_diag_4': 'complete', '2ndfloor_both_diag_5': 'complete'}

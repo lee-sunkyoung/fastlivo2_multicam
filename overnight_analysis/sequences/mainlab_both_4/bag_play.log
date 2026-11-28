@@ -1,0 +1,8 @@
+stdin is not a terminal device. Keyboard handling disabled.[WARN] [1795837580.895693228] [rosbag2_storage_mcap]: attempted to read in receive timestamp order with no message index
+[INFO] [1795837580.896242947] [rosbag2_player]: Set rate to 1
+[INFO] [1795837580.904862139] [rosbag2_player]: Adding keyboard callbacks.
+[INFO] [1795837580.904879906] [rosbag2_player]: Press SPACE for Pause/Resume
+[INFO] [1795837580.904883962] [rosbag2_player]: Press CURSOR_RIGHT for Play Next Message
+[INFO] [1795837580.904887327] [rosbag2_player]: Press CURSOR_UP for Increase Rate 10%
+[INFO] [1795837580.904890342] [rosbag2_player]: Press CURSOR_DOWN for Decrease Rate 10%
+[INFO] [1795837580.906133784] [rosbag2_player]: Playback until timestamp: -1

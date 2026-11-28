@@ -1,0 +1,109 @@
+# PROGRESS — 밤샘 작업 진행 상황
+
+재개할 때: 이 파일과 `src/probsolv.md`를 먼저 읽는다. `sequences/<seq>/`에 path·csv·pcd가 다 있는 런은 완료로 보고 건너뛴다
+(배치 스크립트가 자동 판정). 일부만 있으면 `<seq>_incomplete`로 옮긴 뒤 다시 실행한다.
+
+## 이벤트 로그
+- 2026-11-28 03:40 작업 시작, Phase 0 환경 조사
+- 2026-11-28 03:47 **중단 1** (사용자 실수). 재개 시 남은 프로세스 없음, 실행된 런 없음 → _incomplete 대상 없음
+- 2026-11-28 03:52 C++ 계측(Phase 1/2/5/6/7분) 구현·빌드, 03:55 테스트 런 성공
+- 2026-11-28 04:01 `scripts/run_all.sh` 시작 (nohup/setsid). 순서: mainlab 20 → 2ndfloor 20 → mainlab drop20/50 10 → diag 10 (총 60런, 예상 ~4.5 h)
+  - 중단되면: `ps`로 run_all/run_batch/ros2 프로세스 정리 후 `nohup setsid scripts/run_all.sh &` 재실행 → 완료 런은 자동 건너뜀
+- 2026-11-28 05:15 Phase 2 완료(20/20), 05:15~ Phase 4 2ndfloor 런 진행 중. Phase 3 분석은 nice로 병행
+  - 진행 로그: `sequences/_batch_logs/run_all.log`, `phase*.log`
+- 2026-11-28 06:57 Phase 4 런 완료(20/20), Phase 5 drop 런 자동 시작. Phase 4 분석은 nice로 병행
+- 2026-11-28 07:34 Phase 5 런 완료(10/10), Phase 7 diag 런 자동 시작
+- 2026-11-28 08:18 계획 런 전부 완료(60/60). 08:18~ 추가 실험: left_nomp ×3(완료, 비결정 유지), bag 지연 스캔(완료, 지연 일정), 08:30~ both/both_diag 6~10(로깅 영향), 이어서 off60 ×3(드롭 급증 원인)
+- 2026-11-28 09:17 추가 실험 전부 완료(both/both_diag 6~10, off60 ×3). 09:20 vio.cpp diag 수정 재빌드, SUMMARY 작성 → 작업 종료
+- (완료) 남은 확인(모든 런 종료 후): bag 토픽별 수신 지연(log_time−header.stamp) — both 드롭 140 s 급증 원인, MP 끈 빌드 결정성 실험
+
+## Phase 체크리스트
+- [x] Phase 0 환경 조사 (결과: probsolv.md)
+- [x] Phase 1 저장 방식 수정 + run_batch + 1런 테스트 (commit: ws aa28f53, FASTLIVO2 d29d524)
+- [x] Phase 2 main_lab 20런 + img_stats/타이밍 csv (20/20 complete, results/mainlab/run_stats.csv)
+- [x] Phase 3 main_lab 분석 (results/mainlab_analysis.md)
+- [ ] (추가) 비결정성 검증: MP 끈 빌드로 left ×3 — 모든 런 끝난 뒤
+- [x] Phase 4 2nd_floor 20런 + 분석 + 비교 (20/20 complete; results/2ndfloor_analysis.md, results/mainlab_vs_2ndfloor.md)
+- [x] Phase 5 인위적 드롭 (drop20 ×5, drop50 ×5) — 10/10 complete, results/drop_ablation.md
+- [x] Phase 6 T1 HᵀH 고유값 로깅 — 코드(d29d524, diag_log.degeneracy_en), 로깅 on/off 영향은 추가 실험 2로 확인 중
+- [x] Phase 7 T2 카메라 보완량 + diag 10런 (10/10, results/degeneracy_analysis.md; §3 on/off 판정은 추가 실험 2 뒤 갱신)
+- [x] Phase 8 SUMMARY (results/SUMMARY.md)
+
+## 완료된 런
+- [x] mainlab_both_test1 — complete (2026-11-28 03:59:35) stop=sigint cam0 used 4242/5399 old 687 ovf 69 forced 0; cam1 used 4239/5395 old 682 ovf 67 forced 0
+- [x] mainlab_both_1 — complete (2026-11-28 04:05:23) stop=sigint cam0 used 4251/5401 old 733 ovf 33 forced 0; cam1 used 4217/5405 old 669 ovf 14 forced 0
+- [x] mainlab_left_1 — complete (2026-11-28 04:09:04) stop=sigint cam0 used 5405/5407 old 2 ovf 0 forced 0
+- [x] mainlab_right_1 — complete (2026-11-28 04:12:45) stop=sigint cam0 used 5405/5406 old 1 ovf 0 forced 0
+- [x] mainlab_fastlio_1 — complete (2026-11-28 04:16:23) stop=sigint 
+- [x] mainlab_both_2 — complete (2026-11-28 04:20:04) stop=sigint cam0 used 4247/5401 old 692 ovf 30 forced 0; cam1 used 4245/5396 old 687 ovf 44 forced 0
+- [x] mainlab_left_2 — complete (2026-11-28 04:23:46) stop=sigint cam0 used 5405/5407 old 2 ovf 0 forced 0
+- [x] mainlab_right_2 — complete (2026-11-28 04:27:27) stop=sigint cam0 used 5405/5406 old 1 ovf 0 forced 0
+- [x] mainlab_fastlio_2 — complete (2026-11-28 04:31:05) stop=sigint 
+- [x] mainlab_both_3 — complete (2026-11-28 04:34:46) stop=sigint cam0 used 4338/5406 old 664 ovf 56 forced 0; cam1 used 4350/5399 old 706 ovf 42 forced 0
+- [x] mainlab_left_3 — complete (2026-11-28 04:38:28) stop=sigint cam0 used 5405/5407 old 2 ovf 0 forced 0
+- [x] mainlab_right_3 — complete (2026-11-28 04:42:09) stop=sigint cam0 used 5405/5406 old 1 ovf 0 forced 0
+- [x] mainlab_fastlio_3 — complete (2026-11-28 04:45:47) stop=sigint 
+- [x] mainlab_both_4 — complete (2026-11-28 04:49:28) stop=sigint cam0 used 4280/5396 old 673 ovf 54 forced 0; cam1 used 4213/5394 old 592 ovf 44 forced 0
+- [x] mainlab_left_4 — complete (2026-11-28 04:53:09) stop=sigint cam0 used 5405/5407 old 2 ovf 0 forced 0
+- [x] mainlab_right_4 — complete (2026-11-28 04:56:50) stop=sigint cam0 used 5405/5406 old 1 ovf 0 forced 0
+- [x] mainlab_fastlio_4 — complete (2026-11-28 05:00:29) stop=sigint 
+- [x] mainlab_both_5 — complete (2026-11-28 05:04:10) stop=sigint cam0 used 4273/5392 old 690 ovf 43 forced 0; cam1 used 4199/5393 old 593 ovf 100 forced 0
+- [x] mainlab_left_5 — complete (2026-11-28 05:07:51) stop=sigint cam0 used 5405/5407 old 2 ovf 0 forced 0
+- [x] mainlab_right_5 — complete (2026-11-28 05:11:32) stop=sigint cam0 used 5405/5406 old 1 ovf 0 forced 0
+- [x] mainlab_fastlio_5 — complete (2026-11-28 05:15:12) stop=sigint 
+- [x] 2ndfloor_both_1 — complete (2026-11-28 05:20:18) stop=sigint cam0 used 6251/8841 old 1233 ovf 268 forced 0; cam1 used 6279/8835 old 1250 ovf 223 forced 0
+- [x] 2ndfloor_left_1 — complete (2026-11-28 05:25:25) stop=sigint cam0 used 8575/8840 old 265 ovf 0 forced 0
+- [x] 2ndfloor_right_1 — complete (2026-11-28 05:30:31) stop=sigint cam0 used 8707/8845 old 138 ovf 0 forced 0
+- [x] 2ndfloor_fastlio_1 — complete (2026-11-28 05:35:35) stop=sigint 
+- [x] 2ndfloor_both_2 — complete (2026-11-28 05:40:41) stop=sigint cam0 used 6338/8837 old 1199 ovf 190 forced 0; cam1 used 6420/8839 old 1219 ovf 211 forced 0
+- [x] 2ndfloor_left_2 — complete (2026-11-28 05:45:47) stop=sigint cam0 used 8458/8842 old 383 ovf 0 forced 0
+- [x] 2ndfloor_right_2 — complete (2026-11-28 05:50:53) stop=sigint cam0 used 8763/8846 old 83 ovf 0 forced 0
+- [x] 2ndfloor_fastlio_2 — complete (2026-11-28 05:55:57) stop=sigint 
+- [x] 2ndfloor_both_3 — complete (2026-11-28 06:01:04) stop=sigint cam0 used 6286/8840 old 1221 ovf 207 forced 0; cam1 used 6336/8843 old 1210 ovf 176 forced 0
+- [x] 2ndfloor_left_3 — complete (2026-11-28 06:06:10) stop=sigint cam0 used 8557/8843 old 286 ovf 0 forced 0
+- [x] 2ndfloor_right_3 — complete (2026-11-28 06:11:16) stop=sigint cam0 used 8590/8840 old 250 ovf 0 forced 0
+- [x] 2ndfloor_fastlio_3 — complete (2026-11-28 06:16:20) stop=sigint 
+- [x] 2ndfloor_both_4 — complete (2026-11-28 06:21:26) stop=sigint cam0 used 6457/8836 old 1150 ovf 160 forced 0; cam1 used 6420/8838 old 1074 ovf 143 forced 0
+- [x] 2ndfloor_left_4 — complete (2026-11-28 06:26:33) stop=sigint cam0 used 8646/8842 old 196 ovf 0 forced 0
+- [x] 2ndfloor_right_4 — complete (2026-11-28 06:31:39) stop=sigint cam0 used 8755/8840 old 85 ovf 0 forced 0
+- [x] 2ndfloor_fastlio_4 — complete (2026-11-28 06:36:43) stop=sigint 
+- [x] 2ndfloor_both_5 — complete (2026-11-28 06:41:49) stop=sigint cam0 used 6532/8833 old 1197 ovf 136 forced 0; cam1 used 6376/8835 old 1000 ovf 232 forced 0
+- [x] 2ndfloor_left_5 — complete (2026-11-28 06:46:55) stop=sigint cam0 used 8543/8846 old 303 ovf 0 forced 0
+- [x] 2ndfloor_right_5 — complete (2026-11-28 06:52:02) stop=sigint cam0 used 8735/8840 old 105 ovf 0 forced 0
+- [x] 2ndfloor_fastlio_5 — complete (2026-11-28 06:57:06) stop=sigint 
+- [x] mainlab_both_drop20_1 — complete (2026-11-28 07:00:47) stop=sigint cam0 used 3631/5398 old 567 ovf 26 forced 850; cam1 used 3616/5396 old 527 ovf 42 forced 867
+- [x] mainlab_both_drop50_1 — complete (2026-11-28 07:04:28) stop=sigint cam0 used 2324/5403 old 458 ovf 20 forced 2237; cam1 used 2273/5402 old 412 ovf 19 forced 2196
+- [x] mainlab_both_drop20_2 — complete (2026-11-28 07:08:09) stop=sigint cam0 used 3607/5396 old 584 ovf 69 forced 887; cam1 used 3589/5396 old 536 ovf 48 forced 898
+- [x] mainlab_both_drop50_2 — complete (2026-11-28 07:11:50) stop=sigint cam0 used 2232/5396 old 481 ovf 37 forced 2282; cam1 used 2219/5398 old 356 ovf 33 forced 2178
+- [x] mainlab_both_drop20_3 — complete (2026-11-28 07:15:32) stop=sigint cam0 used 3627/5391 old 555 ovf 26 forced 878; cam1 used 3566/5400 old 463 ovf 50 forced 856
+- [x] mainlab_both_drop50_3 — complete (2026-11-28 07:19:13) stop=sigint cam0 used 2344/5392 old 447 ovf 36 forced 2276; cam1 used 2281/5397 old 381 ovf 31 forced 2236
+- [x] mainlab_both_drop20_4 — complete (2026-11-28 07:22:54) stop=sigint cam0 used 3549/5395 old 587 ovf 37 forced 897; cam1 used 3592/5398 old 519 ovf 66 forced 858
+- [x] mainlab_both_drop50_4 — complete (2026-11-28 07:26:35) stop=sigint cam0 used 2280/5400 old 453 ovf 30 forced 2297; cam1 used 2301/5398 old 395 ovf 24 forced 2262
+- [x] mainlab_both_drop20_5 — complete (2026-11-28 07:30:16) stop=sigint cam0 used 3462/5393 old 581 ovf 33 forced 860; cam1 used 3444/5399 old 547 ovf 52 forced 874
+- [x] mainlab_both_drop50_5 — complete (2026-11-28 07:33:57) stop=sigint cam0 used 2247/5398 old 398 ovf 48 forced 2261; cam1 used 2423/5396 old 426 ovf 17 forced 2287
+- [x] mainlab_both_diag_1 — complete (2026-11-28 07:37:39) stop=sigint cam0 used 4243/5398 old 691 ovf 46 forced 0; cam1 used 4308/5400 old 727 ovf 42 forced 0
+- [x] mainlab_both_diag_2 — complete (2026-11-28 07:41:20) stop=sigint cam0 used 4353/5397 old 699 ovf 59 forced 0; cam1 used 4368/5397 old 684 ovf 61 forced 0
+- [x] mainlab_both_diag_3 — complete (2026-11-28 07:45:01) stop=sigint cam0 used 4257/5403 old 711 ovf 27 forced 0; cam1 used 4103/5397 old 608 ovf 68 forced 0
+- [x] mainlab_both_diag_4 — complete (2026-11-28 07:48:42) stop=sigint cam0 used 4195/5394 old 728 ovf 60 forced 0; cam1 used 4202/5396 old 708 ovf 80 forced 0
+- [x] mainlab_both_diag_5 — complete (2026-11-28 07:52:23) stop=sigint cam0 used 4257/5404 old 739 ovf 47 forced 0; cam1 used 4201/5404 old 662 ovf 73 forced 0
+- [x] 2ndfloor_both_diag_1 — complete (2026-11-28 07:57:30) stop=sigint cam0 used 6462/8842 old 1135 ovf 119 forced 0; cam1 used 6361/8841 old 1132 ovf 185 forced 0
+- [x] 2ndfloor_both_diag_2 — complete (2026-11-28 08:02:36) stop=sigint cam0 used 6206/8842 old 1179 ovf 248 forced 0; cam1 used 6430/8840 old 1293 ovf 179 forced 0
+- [x] 2ndfloor_both_diag_3 — complete (2026-11-28 08:07:42) stop=sigint cam0 used 6179/8846 old 1350 ovf 268 forced 0; cam1 used 6119/8842 old 1222 ovf 226 forced 0
+- [x] 2ndfloor_both_diag_4 — complete (2026-11-28 08:12:48) stop=sigint cam0 used 6535/8838 old 1190 ovf 185 forced 0; cam1 used 6438/8841 old 1082 ovf 157 forced 0
+- [x] 2ndfloor_both_diag_5 — complete (2026-11-28 08:17:55) stop=sigint cam0 used 6606/8843 old 1170 ovf 216 forced 0; cam1 used 6575/8839 old 1037 ovf 183 forced 0
+- [x] mainlab_left_nomp_1 — complete (2026-11-28 08:21:53) stop=sigint cam0 used 5406/5407 old 1 ovf 0 forced 0
+- [x] mainlab_left_nomp_2 — complete (2026-11-28 08:25:34) stop=sigint cam0 used 5406/5407 old 1 ovf 0 forced 0
+- [x] mainlab_left_nomp_3 — complete (2026-11-28 08:29:15) stop=sigint cam0 used 5406/5407 old 1 ovf 0 forced 0
+- [x] mainlab_both_6 — complete (2026-11-28 08:34:09) stop=sigint cam0 used 4302/5402 old 731 ovf 32 forced 0; cam1 used 4215/5398 old 611 ovf 102 forced 0
+- [x] mainlab_both_diag_6 — complete (2026-11-28 08:37:50) stop=sigint cam0 used 4206/5395 old 739 ovf 61 forced 0; cam1 used 4132/5402 old 637 ovf 95 forced 0
+- [x] mainlab_both_7 — complete (2026-11-28 08:41:31) stop=sigint cam0 used 4265/5405 old 702 ovf 55 forced 0; cam1 used 4259/5401 old 671 ovf 51 forced 0
+- [x] mainlab_both_diag_7 — complete (2026-11-28 08:45:12) stop=sigint cam0 used 4369/5399 old 761 ovf 44 forced 0; cam1 used 4251/5399 old 667 ovf 75 forced 0
+- [x] mainlab_both_8 — complete (2026-11-28 08:48:53) stop=sigint cam0 used 4364/5405 old 658 ovf 58 forced 0; cam1 used 4419/5406 old 661 ovf 33 forced 0
+- [x] mainlab_both_diag_8 — complete (2026-11-28 08:52:34) stop=sigint cam0 used 4243/5400 old 672 ovf 58 forced 0; cam1 used 4266/5394 old 666 ovf 64 forced 0
+- [x] mainlab_both_9 — complete (2026-11-28 08:56:15) stop=sigint cam0 used 4371/5399 old 710 ovf 33 forced 0; cam1 used 4265/5397 old 604 ovf 64 forced 0
+- [x] mainlab_both_diag_9 — complete (2026-11-28 08:59:56) stop=sigint cam0 used 4324/5404 old 766 ovf 48 forced 0; cam1 used 4216/5398 old 631 ovf 82 forced 0
+- [x] mainlab_both_10 — complete (2026-11-28 09:03:37) stop=sigint cam0 used 4311/5400 old 716 ovf 41 forced 0; cam1 used 4272/5401 old 701 ovf 79 forced 0
+- [x] mainlab_both_diag_10 — complete (2026-11-28 09:07:19) stop=sigint cam0 used 4221/5395 old 680 ovf 82 forced 0; cam1 used 4153/5394 old 678 ovf 112 forced 0
+- [x] mainlab_both_off60_1 — complete (2026-11-28 09:10:00) stop=sigint cam0 used 3258/3609 old 338 ovf 1 forced 0; cam1 used 3257/3608 old 311 ovf 0 forced 0
+- [x] mainlab_both_off60_2 — complete (2026-11-28 09:12:41) stop=sigint cam0 used 3250/3609 old 345 ovf 0 forced 0; cam1 used 3253/3608 old 330 ovf 1 forced 0
+- [x] 2ndfloor_both_off60_1 — complete (2026-11-28 09:16:48) stop=sigint cam0 used 4967/7037 old 986 ovf 122 forced 0; cam1 used 4857/7038 old 881 ovf 165 forced 0

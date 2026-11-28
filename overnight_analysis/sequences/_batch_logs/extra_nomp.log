@@ -1,0 +1,8 @@
+[2026-11-28 08:18:12] plan: ['mainlab_left_nomp_1', 'mainlab_left_nomp_2', 'mainlab_left_nomp_3']
+[2026-11-28 08:18:12] RUN  mainlab_left_nomp_1  (bag 223s)
+[2026-11-28 08:21:53] DONE mainlab_left_nomp_1: complete stop=sigint moved=['mainlab_left_nomp_1.txt', 'mainlab_left_nomp_1.csv', 'mainlab_left_nomp_1_timing.csv', 'mainlab_left_nomp_1_img_stats.csv', 'mainlab_left_nomp_1_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:21:53] RUN  mainlab_left_nomp_2  (bag 223s)
+[2026-11-28 08:25:34] DONE mainlab_left_nomp_2: complete stop=sigint moved=['mainlab_left_nomp_2.txt', 'mainlab_left_nomp_2.csv', 'mainlab_left_nomp_2_img_stats.csv', 'mainlab_left_nomp_2_drops.csv', 'mainlab_left_nomp_2_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:25:34] RUN  mainlab_left_nomp_3  (bag 223s)
+[2026-11-28 08:29:15] DONE mainlab_left_nomp_3: complete stop=sigint moved=['mainlab_left_nomp_3.txt', 'mainlab_left_nomp_3.csv', 'mainlab_left_nomp_3_img_stats.csv', 'mainlab_left_nomp_3_drops.csv', 'mainlab_left_nomp_3_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 08:29:15] batch finished: {'mainlab_left_nomp_1': 'complete', 'mainlab_left_nomp_2': 'complete', 'mainlab_left_nomp_3': 'complete'}

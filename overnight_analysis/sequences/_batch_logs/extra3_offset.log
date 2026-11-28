@@ -1,0 +1,10 @@
+[2026-11-28 09:07:20] plan: ['mainlab_both_off60_1', 'mainlab_both_off60_2']
+[2026-11-28 09:07:20] RUN  mainlab_both_off60_1  (bag 223s)
+[2026-11-28 09:10:00] DONE mainlab_both_off60_1: complete stop=sigint moved=['mainlab_both_off60_1.txt', 'mainlab_both_off60_1.csv', 'mainlab_both_off60_1_drops.csv', 'mainlab_both_off60_1_timing.csv', 'mainlab_both_off60_1_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 09:10:00] RUN  mainlab_both_off60_2  (bag 223s)
+[2026-11-28 09:12:41] DONE mainlab_both_off60_2: complete stop=sigint moved=['mainlab_both_off60_2.txt', 'mainlab_both_off60_2.csv', 'mainlab_both_off60_2_drops.csv', 'mainlab_both_off60_2_img_stats.csv', 'mainlab_both_off60_2_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 09:12:41] batch finished: {'mainlab_both_off60_1': 'complete', 'mainlab_both_off60_2': 'complete'}
+[2026-11-28 09:12:42] plan: ['2ndfloor_both_off60_1']
+[2026-11-28 09:12:42] RUN  2ndfloor_both_off60_1  (bag 295s)
+[2026-11-28 09:16:48] DONE 2ndfloor_both_off60_1: complete stop=sigint moved=['2ndfloor_both_off60_1.txt', '2ndfloor_both_off60_1.csv', '2ndfloor_both_off60_1_img_stats.csv', '2ndfloor_both_off60_1_timing.csv', '2ndfloor_both_off60_1_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 09:16:48] batch finished: {'2ndfloor_both_off60_1': 'complete'}

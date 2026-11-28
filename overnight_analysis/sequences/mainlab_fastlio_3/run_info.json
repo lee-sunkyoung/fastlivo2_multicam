@@ -1,0 +1,21 @@
+{
+ "seq_name": "mainlab_fastlio_3",
+ "seq": "mainlab",
+ "cond": "fastlio",
+ "run": "3",
+ "bag": "/home/lsk/dlr_ros2_bag/ros2_bag_livo_2_cams_main_lab_2_loops",
+ "bag_duration_s": 223.270838964,
+ "start": "2026-11-28 04:42:09",
+ "status": "complete",
+ "launch_cmd": "ros2 launch fast_lio mapping.launch.py rviz:=false",
+ "bag_play_wall_s": 210.4,
+ "bag_play_rc": 0,
+ "node_alive_after_bag": true,
+ "post_bag_wait_s": 3.0,
+ "stop": "sigint",
+ "launch_rc": 0,
+ "moved": [
+  "mainlab_fastlio_3.txt"
+ ],
+ "end": "2026-11-28 04:45:47"
+}

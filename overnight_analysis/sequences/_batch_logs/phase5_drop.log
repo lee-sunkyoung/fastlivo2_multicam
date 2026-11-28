@@ -1,0 +1,22 @@
+[2026-11-28 06:57:06] plan: ['mainlab_both_drop20_1', 'mainlab_both_drop50_1', 'mainlab_both_drop20_2', 'mainlab_both_drop50_2', 'mainlab_both_drop20_3', 'mainlab_both_drop50_3', 'mainlab_both_drop20_4', 'mainlab_both_drop50_4', 'mainlab_both_drop20_5', 'mainlab_both_drop50_5']
+[2026-11-28 06:57:06] RUN  mainlab_both_drop20_1  (bag 223s)
+[2026-11-28 07:00:47] DONE mainlab_both_drop20_1: complete stop=sigint moved=['mainlab_both_drop20_1.txt', 'mainlab_both_drop20_1.csv', 'mainlab_both_drop20_1_img_stats.csv', 'mainlab_both_drop20_1_drops.csv', 'mainlab_both_drop20_1_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:00:47] RUN  mainlab_both_drop50_1  (bag 223s)
+[2026-11-28 07:04:28] DONE mainlab_both_drop50_1: complete stop=sigint moved=['mainlab_both_drop50_1.txt', 'mainlab_both_drop50_1.csv', 'mainlab_both_drop50_1_img_stats.csv', 'mainlab_both_drop50_1_drops.csv', 'mainlab_both_drop50_1_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:04:28] RUN  mainlab_both_drop20_2  (bag 223s)
+[2026-11-28 07:08:09] DONE mainlab_both_drop20_2: complete stop=sigint moved=['mainlab_both_drop20_2.txt', 'mainlab_both_drop20_2.csv', 'mainlab_both_drop20_2_img_stats.csv', 'mainlab_both_drop20_2_timing.csv', 'mainlab_both_drop20_2_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:08:09] RUN  mainlab_both_drop50_2  (bag 223s)
+[2026-11-28 07:11:50] DONE mainlab_both_drop50_2: complete stop=sigint moved=['mainlab_both_drop50_2.txt', 'mainlab_both_drop50_2.csv', 'mainlab_both_drop50_2_timing.csv', 'mainlab_both_drop50_2_img_stats.csv', 'mainlab_both_drop50_2_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:11:51] RUN  mainlab_both_drop20_3  (bag 223s)
+[2026-11-28 07:15:32] DONE mainlab_both_drop20_3: complete stop=sigint moved=['mainlab_both_drop20_3.txt', 'mainlab_both_drop20_3.csv', 'mainlab_both_drop20_3_timing.csv', 'mainlab_both_drop20_3_drops.csv', 'mainlab_both_drop20_3_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:15:32] RUN  mainlab_both_drop50_3  (bag 223s)
+[2026-11-28 07:19:13] DONE mainlab_both_drop50_3: complete stop=sigint moved=['mainlab_both_drop50_3.txt', 'mainlab_both_drop50_3.csv', 'mainlab_both_drop50_3_img_stats.csv', 'mainlab_both_drop50_3_timing.csv', 'mainlab_both_drop50_3_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:19:13] RUN  mainlab_both_drop20_4  (bag 223s)
+[2026-11-28 07:22:54] DONE mainlab_both_drop20_4: complete stop=sigint moved=['mainlab_both_drop20_4.txt', 'mainlab_both_drop20_4.csv', 'mainlab_both_drop20_4_img_stats.csv', 'mainlab_both_drop20_4_timing.csv', 'mainlab_both_drop20_4_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:22:54] RUN  mainlab_both_drop50_4  (bag 223s)
+[2026-11-28 07:26:35] DONE mainlab_both_drop50_4: complete stop=sigint moved=['mainlab_both_drop50_4.txt', 'mainlab_both_drop50_4.csv', 'mainlab_both_drop50_4_timing.csv', 'mainlab_both_drop50_4_drops.csv', 'mainlab_both_drop50_4_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:26:35] RUN  mainlab_both_drop20_5  (bag 223s)
+[2026-11-28 07:30:16] DONE mainlab_both_drop20_5: complete stop=sigint moved=['mainlab_both_drop20_5.txt', 'mainlab_both_drop20_5.csv', 'mainlab_both_drop20_5_drops.csv', 'mainlab_both_drop20_5_img_stats.csv', 'mainlab_both_drop20_5_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:30:16] RUN  mainlab_both_drop50_5  (bag 223s)
+[2026-11-28 07:33:57] DONE mainlab_both_drop50_5: complete stop=sigint moved=['mainlab_both_drop50_5.txt', 'mainlab_both_drop50_5.csv', 'mainlab_both_drop50_5_img_stats.csv', 'mainlab_both_drop50_5_timing.csv', 'mainlab_both_drop50_5_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 07:33:57] batch finished: {'mainlab_both_drop20_1': 'complete', 'mainlab_both_drop50_1': 'complete', 'mainlab_both_drop20_2': 'complete', 'mainlab_both_drop50_2': 'complete', 'mainlab_both_drop20_3': 'complete', 'mainlab_both_drop50_3': 'complete', 'mainlab_both_drop20_4': 'complete', 'mainlab_both_drop50_4': 'complete', 'mainlab_both_drop20_5': 'complete', 'mainlab_both_drop50_5': 'complete'}

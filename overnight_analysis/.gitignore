@@ -1,0 +1,14 @@
+build/
+install/
+log/
+.vscode/
+backup_Log_before_overnight/
+src/FASTLIVO2_ROS2/
+src/FAST_LIO_ROS2/
+src/rpg_vikit_ros2_fisheye/
+src/.codegraph/
+*.pcd
+__pycache__/
+
+# 런별 노드 콘솔 로그(총 ~2 GB) — 디스크에만 보관
+sequences/*/run.log

@@ -1,0 +1,29 @@
+{
+ "seq_name": "mainlab_right_1",
+ "seq": "mainlab",
+ "cond": "right",
+ "run": "1",
+ "bag": "/home/lsk/dlr_ros2_bag/ros2_bag_livo_2_cams_main_lab_2_loops",
+ "bag_duration_s": 223.270838964,
+ "start": "2026-11-28 04:09:04",
+ "status": "complete",
+ "launch_cmd": "ros2 launch fast_livo mapping_justin.launch.py use_rviz:=false avia_params_file:=/home/lsk/dlr_ws/sequences/mainlab_right_1/params_lvig.yaml camera_params_file:=/home/lsk/dlr_ws/sequences/mainlab_right_1/params_cam.yaml",
+ "bag_play_wall_s": 210.6,
+ "bag_play_rc": 0,
+ "node_alive_after_bag": true,
+ "post_bag_wait_s": 4.5,
+ "stop": "sigint",
+ "launch_rc": 0,
+ "clean_finish_marker": true,
+ "exit_segfault": true,
+ "moved": [
+  "mainlab_right_1.txt",
+  "mainlab_right_1.csv",
+  "mainlab_right_1_img_stats.csv",
+  "mainlab_right_1_drops.csv",
+  "mainlab_right_1_timing.csv",
+  "all_raw_points.pcd",
+  "all_downsampled_points.pcd"
+ ],
+ "end": "2026-11-28 04:12:45"
+}

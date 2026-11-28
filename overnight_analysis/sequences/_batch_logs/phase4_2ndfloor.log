@@ -1,0 +1,42 @@
+[2026-11-28 05:15:12] plan: ['2ndfloor_both_1', '2ndfloor_left_1', '2ndfloor_right_1', '2ndfloor_fastlio_1', '2ndfloor_both_2', '2ndfloor_left_2', '2ndfloor_right_2', '2ndfloor_fastlio_2', '2ndfloor_both_3', '2ndfloor_left_3', '2ndfloor_right_3', '2ndfloor_fastlio_3', '2ndfloor_both_4', '2ndfloor_left_4', '2ndfloor_right_4', '2ndfloor_fastlio_4', '2ndfloor_both_5', '2ndfloor_left_5', '2ndfloor_right_5', '2ndfloor_fastlio_5']
+[2026-11-28 05:15:12] RUN  2ndfloor_both_1  (bag 295s)
+[2026-11-28 05:20:18] DONE 2ndfloor_both_1: complete stop=sigint moved=['2ndfloor_both_1.txt', '2ndfloor_both_1.csv', '2ndfloor_both_1_timing.csv', '2ndfloor_both_1_drops.csv', '2ndfloor_both_1_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:20:18] RUN  2ndfloor_left_1  (bag 295s)
+[2026-11-28 05:25:25] DONE 2ndfloor_left_1: complete stop=sigint moved=['2ndfloor_left_1.txt', '2ndfloor_left_1.csv', '2ndfloor_left_1_timing.csv', '2ndfloor_left_1_img_stats.csv', '2ndfloor_left_1_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:25:25] RUN  2ndfloor_right_1  (bag 295s)
+[2026-11-28 05:30:31] DONE 2ndfloor_right_1: complete stop=sigint moved=['2ndfloor_right_1.txt', '2ndfloor_right_1.csv', '2ndfloor_right_1_img_stats.csv', '2ndfloor_right_1_timing.csv', '2ndfloor_right_1_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:30:31] RUN  2ndfloor_fastlio_1  (bag 295s)
+[2026-11-28 05:35:35] DONE 2ndfloor_fastlio_1: complete stop=sigint moved=['2ndfloor_fastlio_1.txt']
+[2026-11-28 05:35:35] RUN  2ndfloor_both_2  (bag 295s)
+[2026-11-28 05:40:41] DONE 2ndfloor_both_2: complete stop=sigint moved=['2ndfloor_both_2.txt', '2ndfloor_both_2.csv', '2ndfloor_both_2_img_stats.csv', '2ndfloor_both_2_drops.csv', '2ndfloor_both_2_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:40:41] RUN  2ndfloor_left_2  (bag 295s)
+[2026-11-28 05:45:47] DONE 2ndfloor_left_2: complete stop=sigint moved=['2ndfloor_left_2.txt', '2ndfloor_left_2.csv', '2ndfloor_left_2_timing.csv', '2ndfloor_left_2_img_stats.csv', '2ndfloor_left_2_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:45:47] RUN  2ndfloor_right_2  (bag 295s)
+[2026-11-28 05:50:53] DONE 2ndfloor_right_2: complete stop=sigint moved=['2ndfloor_right_2.txt', '2ndfloor_right_2.csv', '2ndfloor_right_2_drops.csv', '2ndfloor_right_2_timing.csv', '2ndfloor_right_2_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:50:53] RUN  2ndfloor_fastlio_2  (bag 295s)
+[2026-11-28 05:55:57] DONE 2ndfloor_fastlio_2: complete stop=sigint moved=['2ndfloor_fastlio_2.txt']
+[2026-11-28 05:55:58] RUN  2ndfloor_both_3  (bag 295s)
+[2026-11-28 06:01:04] DONE 2ndfloor_both_3: complete stop=sigint moved=['2ndfloor_both_3.txt', '2ndfloor_both_3.csv', '2ndfloor_both_3_img_stats.csv', '2ndfloor_both_3_timing.csv', '2ndfloor_both_3_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:01:04] RUN  2ndfloor_left_3  (bag 295s)
+[2026-11-28 06:06:10] DONE 2ndfloor_left_3: complete stop=sigint moved=['2ndfloor_left_3.txt', '2ndfloor_left_3.csv', '2ndfloor_left_3_drops.csv', '2ndfloor_left_3_img_stats.csv', '2ndfloor_left_3_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:06:10] RUN  2ndfloor_right_3  (bag 295s)
+[2026-11-28 06:11:16] DONE 2ndfloor_right_3: complete stop=sigint moved=['2ndfloor_right_3.txt', '2ndfloor_right_3.csv', '2ndfloor_right_3_img_stats.csv', '2ndfloor_right_3_drops.csv', '2ndfloor_right_3_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:11:16] RUN  2ndfloor_fastlio_3  (bag 295s)
+[2026-11-28 06:16:20] DONE 2ndfloor_fastlio_3: complete stop=sigint moved=['2ndfloor_fastlio_3.txt']
+[2026-11-28 06:16:20] RUN  2ndfloor_both_4  (bag 295s)
+[2026-11-28 06:21:27] DONE 2ndfloor_both_4: complete stop=sigint moved=['2ndfloor_both_4.txt', '2ndfloor_both_4.csv', '2ndfloor_both_4_timing.csv', '2ndfloor_both_4_drops.csv', '2ndfloor_both_4_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:21:27] RUN  2ndfloor_left_4  (bag 295s)
+[2026-11-28 06:26:33] DONE 2ndfloor_left_4: complete stop=sigint moved=['2ndfloor_left_4.txt', '2ndfloor_left_4.csv', '2ndfloor_left_4_img_stats.csv', '2ndfloor_left_4_drops.csv', '2ndfloor_left_4_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:26:33] RUN  2ndfloor_right_4  (bag 295s)
+[2026-11-28 06:31:39] DONE 2ndfloor_right_4: complete stop=sigint moved=['2ndfloor_right_4.txt', '2ndfloor_right_4.csv', '2ndfloor_right_4_drops.csv', '2ndfloor_right_4_timing.csv', '2ndfloor_right_4_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:31:39] RUN  2ndfloor_fastlio_4  (bag 295s)
+[2026-11-28 06:36:43] DONE 2ndfloor_fastlio_4: complete stop=sigint moved=['2ndfloor_fastlio_4.txt']
+[2026-11-28 06:36:43] RUN  2ndfloor_both_5  (bag 295s)
+[2026-11-28 06:41:49] DONE 2ndfloor_both_5: complete stop=sigint moved=['2ndfloor_both_5.txt', '2ndfloor_both_5.csv', '2ndfloor_both_5_drops.csv', '2ndfloor_both_5_img_stats.csv', '2ndfloor_both_5_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:41:49] RUN  2ndfloor_left_5  (bag 295s)
+[2026-11-28 06:46:55] DONE 2ndfloor_left_5: complete stop=sigint moved=['2ndfloor_left_5.txt', '2ndfloor_left_5.csv', '2ndfloor_left_5_img_stats.csv', '2ndfloor_left_5_timing.csv', '2ndfloor_left_5_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:46:56] RUN  2ndfloor_right_5  (bag 295s)
+[2026-11-28 06:52:02] DONE 2ndfloor_right_5: complete stop=sigint moved=['2ndfloor_right_5.txt', '2ndfloor_right_5.csv', '2ndfloor_right_5_img_stats.csv', '2ndfloor_right_5_drops.csv', '2ndfloor_right_5_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 06:52:02] RUN  2ndfloor_fastlio_5  (bag 295s)
+[2026-11-28 06:57:06] DONE 2ndfloor_fastlio_5: complete stop=sigint moved=['2ndfloor_fastlio_5.txt']
+[2026-11-28 06:57:06] batch finished: {'2ndfloor_both_1': 'complete', '2ndfloor_left_1': 'complete', '2ndfloor_right_1': 'complete', '2ndfloor_fastlio_1': 'complete', '2ndfloor_both_2': 'complete', '2ndfloor_left_2': 'complete', '2ndfloor_right_2': 'complete', '2ndfloor_fastlio_2': 'complete', '2ndfloor_both_3': 'complete', '2ndfloor_left_3': 'complete', '2ndfloor_right_3': 'complete', '2ndfloor_fastlio_3': 'complete', '2ndfloor_both_4': 'complete', '2ndfloor_left_4': 'complete', '2ndfloor_right_4': 'complete', '2ndfloor_fastlio_4': 'complete', '2ndfloor_both_5': 'complete', '2ndfloor_left_5': 'complete', '2ndfloor_right_5': 'complete', '2ndfloor_fastlio_5': 'complete'}

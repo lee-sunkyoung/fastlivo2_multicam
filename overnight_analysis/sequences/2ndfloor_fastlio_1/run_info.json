@@ -1,0 +1,21 @@
+{
+ "seq_name": "2ndfloor_fastlio_1",
+ "seq": "2ndfloor",
+ "cond": "fastlio",
+ "run": "1",
+ "bag": "/home/lsk/dlr_ros2_bag/ros2_bag_livo_2_cams_2nd_floor",
+ "bag_duration_s": 295.130570555,
+ "start": "2026-11-28 05:30:31",
+ "status": "complete",
+ "launch_cmd": "ros2 launch fast_lio mapping.launch.py rviz:=false",
+ "bag_play_wall_s": 295.9,
+ "bag_play_rc": 0,
+ "node_alive_after_bag": true,
+ "post_bag_wait_s": 3.0,
+ "stop": "sigint",
+ "launch_rc": 0,
+ "moved": [
+  "2ndfloor_fastlio_1.txt"
+ ],
+ "end": "2026-11-28 05:35:35"
+}

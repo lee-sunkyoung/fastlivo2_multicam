@@ -1,0 +1,4 @@
+cam,recv,used,skipped_old,stale,overflow,forced,dup,loop,jump,before_lidar,cv,eligible,used_ratio,total_drop_ratio,forced_drop_ratio_param,forced_drop_seed
+0,8838,6535,1190,927,185,0,0,0,0,0,0,8838,0.739421,0.260579,0.000000,0
+1,8841,6438,1082,1163,157,0,0,0,0,0,0,8841,0.728198,0.271802,0.000000,0
+# lidar_recv=5902 imu_recv=59019

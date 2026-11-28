@@ -1,0 +1,42 @@
+[2026-11-28 04:01:42] plan: ['mainlab_both_1', 'mainlab_left_1', 'mainlab_right_1', 'mainlab_fastlio_1', 'mainlab_both_2', 'mainlab_left_2', 'mainlab_right_2', 'mainlab_fastlio_2', 'mainlab_both_3', 'mainlab_left_3', 'mainlab_right_3', 'mainlab_fastlio_3', 'mainlab_both_4', 'mainlab_left_4', 'mainlab_right_4', 'mainlab_fastlio_4', 'mainlab_both_5', 'mainlab_left_5', 'mainlab_right_5', 'mainlab_fastlio_5']
+[2026-11-28 04:01:42] RUN  mainlab_both_1  (bag 223s)
+[2026-11-28 04:05:23] DONE mainlab_both_1: complete stop=sigint moved=['mainlab_both_1.txt', 'mainlab_both_1.csv', 'mainlab_both_1_timing.csv', 'mainlab_both_1_drops.csv', 'mainlab_both_1_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:05:23] RUN  mainlab_left_1  (bag 223s)
+[2026-11-28 04:09:04] DONE mainlab_left_1: complete stop=sigint moved=['mainlab_left_1.txt', 'mainlab_left_1.csv', 'mainlab_left_1_img_stats.csv', 'mainlab_left_1_drops.csv', 'mainlab_left_1_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:09:04] RUN  mainlab_right_1  (bag 223s)
+[2026-11-28 04:12:45] DONE mainlab_right_1: complete stop=sigint moved=['mainlab_right_1.txt', 'mainlab_right_1.csv', 'mainlab_right_1_img_stats.csv', 'mainlab_right_1_drops.csv', 'mainlab_right_1_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:12:45] RUN  mainlab_fastlio_1  (bag 223s)
+[2026-11-28 04:16:23] DONE mainlab_fastlio_1: complete stop=sigint moved=['mainlab_fastlio_1.txt']
+[2026-11-28 04:16:23] RUN  mainlab_both_2  (bag 223s)
+[2026-11-28 04:20:04] DONE mainlab_both_2: complete stop=sigint moved=['mainlab_both_2.txt', 'mainlab_both_2.csv', 'mainlab_both_2_drops.csv', 'mainlab_both_2_img_stats.csv', 'mainlab_both_2_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:20:04] RUN  mainlab_left_2  (bag 223s)
+[2026-11-28 04:23:46] DONE mainlab_left_2: complete stop=sigint moved=['mainlab_left_2.txt', 'mainlab_left_2.csv', 'mainlab_left_2_timing.csv', 'mainlab_left_2_img_stats.csv', 'mainlab_left_2_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:23:46] RUN  mainlab_right_2  (bag 223s)
+[2026-11-28 04:27:27] DONE mainlab_right_2: complete stop=sigint moved=['mainlab_right_2.txt', 'mainlab_right_2.csv', 'mainlab_right_2_timing.csv', 'mainlab_right_2_img_stats.csv', 'mainlab_right_2_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:27:27] RUN  mainlab_fastlio_2  (bag 223s)
+[2026-11-28 04:31:05] DONE mainlab_fastlio_2: complete stop=sigint moved=['mainlab_fastlio_2.txt']
+[2026-11-28 04:31:05] RUN  mainlab_both_3  (bag 223s)
+[2026-11-28 04:34:46] DONE mainlab_both_3: complete stop=sigint moved=['mainlab_both_3.txt', 'mainlab_both_3.csv', 'mainlab_both_3_img_stats.csv', 'mainlab_both_3_timing.csv', 'mainlab_both_3_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:34:47] RUN  mainlab_left_3  (bag 223s)
+[2026-11-28 04:38:28] DONE mainlab_left_3: complete stop=sigint moved=['mainlab_left_3.txt', 'mainlab_left_3.csv', 'mainlab_left_3_img_stats.csv', 'mainlab_left_3_drops.csv', 'mainlab_left_3_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:38:28] RUN  mainlab_right_3  (bag 223s)
+[2026-11-28 04:42:09] DONE mainlab_right_3: complete stop=sigint moved=['mainlab_right_3.txt', 'mainlab_right_3.csv', 'mainlab_right_3_img_stats.csv', 'mainlab_right_3_drops.csv', 'mainlab_right_3_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:42:09] RUN  mainlab_fastlio_3  (bag 223s)
+[2026-11-28 04:45:47] DONE mainlab_fastlio_3: complete stop=sigint moved=['mainlab_fastlio_3.txt']
+[2026-11-28 04:45:47] RUN  mainlab_both_4  (bag 223s)
+[2026-11-28 04:49:28] DONE mainlab_both_4: complete stop=sigint moved=['mainlab_both_4.txt', 'mainlab_both_4.csv', 'mainlab_both_4_timing.csv', 'mainlab_both_4_img_stats.csv', 'mainlab_both_4_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:49:28] RUN  mainlab_left_4  (bag 223s)
+[2026-11-28 04:53:10] DONE mainlab_left_4: complete stop=sigint moved=['mainlab_left_4.txt', 'mainlab_left_4.csv', 'mainlab_left_4_timing.csv', 'mainlab_left_4_img_stats.csv', 'mainlab_left_4_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:53:10] RUN  mainlab_right_4  (bag 223s)
+[2026-11-28 04:56:51] DONE mainlab_right_4: complete stop=sigint moved=['mainlab_right_4.txt', 'mainlab_right_4.csv', 'mainlab_right_4_drops.csv', 'mainlab_right_4_img_stats.csv', 'mainlab_right_4_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 04:56:51] RUN  mainlab_fastlio_4  (bag 223s)
+[2026-11-28 05:00:29] DONE mainlab_fastlio_4: complete stop=sigint moved=['mainlab_fastlio_4.txt']
+[2026-11-28 05:00:29] RUN  mainlab_both_5  (bag 223s)
+[2026-11-28 05:04:10] DONE mainlab_both_5: complete stop=sigint moved=['mainlab_both_5.txt', 'mainlab_both_5.csv', 'mainlab_both_5_timing.csv', 'mainlab_both_5_img_stats.csv', 'mainlab_both_5_drops.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:04:10] RUN  mainlab_left_5  (bag 223s)
+[2026-11-28 05:07:51] DONE mainlab_left_5: complete stop=sigint moved=['mainlab_left_5.txt', 'mainlab_left_5.csv', 'mainlab_left_5_img_stats.csv', 'mainlab_left_5_drops.csv', 'mainlab_left_5_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:07:51] RUN  mainlab_right_5  (bag 223s)
+[2026-11-28 05:11:33] DONE mainlab_right_5: complete stop=sigint moved=['mainlab_right_5.txt', 'mainlab_right_5.csv', 'mainlab_right_5_img_stats.csv', 'mainlab_right_5_drops.csv', 'mainlab_right_5_timing.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 05:11:33] RUN  mainlab_fastlio_5  (bag 223s)
+[2026-11-28 05:15:12] DONE mainlab_fastlio_5: complete stop=sigint moved=['mainlab_fastlio_5.txt']
+[2026-11-28 05:15:12] batch finished: {'mainlab_both_1': 'complete', 'mainlab_left_1': 'complete', 'mainlab_right_1': 'complete', 'mainlab_fastlio_1': 'complete', 'mainlab_both_2': 'complete', 'mainlab_left_2': 'complete', 'mainlab_right_2': 'complete', 'mainlab_fastlio_2': 'complete', 'mainlab_both_3': 'complete', 'mainlab_left_3': 'complete', 'mainlab_right_3': 'complete', 'mainlab_fastlio_3': 'complete', 'mainlab_both_4': 'complete', 'mainlab_left_4': 'complete', 'mainlab_right_4': 'complete', 'mainlab_fastlio_4': 'complete', 'mainlab_both_5': 'complete', 'mainlab_left_5': 'complete', 'mainlab_right_5': 'complete', 'mainlab_fastlio_5': 'complete'}

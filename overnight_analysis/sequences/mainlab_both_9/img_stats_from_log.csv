@@ -1,0 +1,3 @@
+cam,recv,used,used_pct,skipped_old,skipped_old_pct,stale,overflow,dup,loop,jump,before_lidar,cv,forced,total_drop_pct
+0,5399,4371,81.0,710,13.2,285,33,0,0,0,0,0,0,19.04
+1,5397,4265,79.0,604,11.2,464,64,0,0,0,0,0,0,20.97

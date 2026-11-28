@@ -1,0 +1,31 @@
+{
+ "seq_name": "mainlab_both_diag_7",
+ "seq": "mainlab",
+ "cond": "both_diag",
+ "run": "7",
+ "bag": "/home/lsk/dlr_ros2_bag/ros2_bag_livo_2_cams_main_lab_2_loops",
+ "bag_duration_s": 223.270838964,
+ "start": "2026-11-28 08:41:31",
+ "status": "complete",
+ "launch_cmd": "ros2 launch fast_livo mapping_justin.launch.py use_rviz:=false avia_params_file:=/home/lsk/dlr_ws/sequences/mainlab_both_diag_7/params_lvig.yaml camera_params_file:=/home/lsk/dlr_ws/sequences/mainlab_both_diag_7/params_cam.yaml",
+ "bag_play_wall_s": 210.9,
+ "bag_play_rc": 0,
+ "node_alive_after_bag": true,
+ "post_bag_wait_s": 4.0,
+ "stop": "sigint",
+ "launch_rc": 0,
+ "clean_finish_marker": true,
+ "exit_segfault": true,
+ "moved": [
+  "mainlab_both_diag_7.txt",
+  "mainlab_both_diag_7.csv",
+  "mainlab_both_diag_7_img_stats.csv",
+  "mainlab_both_diag_7_lio_eig.csv",
+  "mainlab_both_diag_7_timing.csv",
+  "mainlab_both_diag_7_vis_info.csv",
+  "mainlab_both_diag_7_drops.csv",
+  "all_raw_points.pcd",
+  "all_downsampled_points.pcd"
+ ],
+ "end": "2026-11-28 08:45:12"
+}

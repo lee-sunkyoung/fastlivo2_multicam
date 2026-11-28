@@ -1,0 +1,4 @@
+[2026-11-28 03:55:54] plan: ['mainlab_both_test1']
+[2026-11-28 03:55:54] RUN  mainlab_both_test1  (bag 223s)
+[2026-11-28 03:59:35] DONE mainlab_both_test1: complete stop=sigint moved=['mainlab_both_test1.txt', 'mainlab_both_test1.csv', 'mainlab_both_test1_timing.csv', 'mainlab_both_test1_drops.csv', 'mainlab_both_test1_img_stats.csv', 'all_raw_points.pcd', 'all_downsampled_points.pcd']
+[2026-11-28 03:59:35] batch finished: {'mainlab_both_test1': 'complete'}
