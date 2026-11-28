@@ -99,6 +99,7 @@ public:
   vector<float> patch_buffer;
   bool normal_en, inverse_composition_en, exposure_estimate_en, raycast_en, has_ref_patch_cache;
   bool ncc_en = false, colmap_output_en = false;
+  bool img_pub_en = true;  // false: skip img_cp clone + tracked-point drawing (debug image only)
 
   int width, height, grid_n_width, grid_n_height, length;
   double image_resize_factor;

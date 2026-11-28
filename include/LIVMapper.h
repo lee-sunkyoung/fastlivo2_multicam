@@ -187,6 +187,7 @@ public:
 
   bool lidar_pushed = false, imu_en, gravity_est_en, flg_reset = false, ba_bg_est_en = true;
   bool dense_map_en = false;
+  bool img_pub_en = true;
   int img_en = 1, imu_int_frame = 3;
   bool normal_en = true;
   bool exposure_estimate_en = false;

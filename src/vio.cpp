@@ -1792,7 +1792,7 @@ void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unor
     cv::resize(img, img, cv::Size(img.cols * image_resize_factor, img.rows * image_resize_factor), 0, 0, CV_INTER_LINEAR);
   }
   img_rgb = img.clone();
-  img_cp = img.clone();
+  if (img_pub_en) img_cp = img.clone();
   // img_test = img.clone();
 
   if (img.channels() == 3) cv::cvtColor(img, img, CV_BGR2GRAY);
@@ -1816,7 +1816,7 @@ void VIOManager::processFrame(cv::Mat &img, vector<pointWithVar> &pg, const unor
 
   double t4 = omp_get_wtime();
   
-  plotTrackedPoints();
+  if (img_pub_en) plotTrackedPoints();
 
   if (plot_flag) projectPatchFromRefToCur(feat_map);
 

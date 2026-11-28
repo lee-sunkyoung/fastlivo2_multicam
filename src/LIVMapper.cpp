@@ -137,6 +137,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   try_declare.template operator()<int>("publish.pub_scan_num", 1);
   try_declare.template operator()<bool>("publish.pub_effect_point_en", false);
   try_declare.template operator()<bool>("publish.dense_map_en", false);
+  try_declare.template operator()<bool>("publish.img_pub_en", true);
 
   // get parameter
   this->node->get_parameter("common.lid_topic", lid_topic);
@@ -199,6 +200,7 @@ void LIVMapper::readParameters(rclcpp::Node::SharedPtr &node)
   this->node->get_parameter("publish.pub_scan_num", pub_scan_num);
   this->node->get_parameter("publish.pub_effect_point_en", pub_effect_point_en);
   this->node->get_parameter("publish.dense_map_en", dense_map_en);
+  this->node->get_parameter("publish.img_pub_en", img_pub_en);
 
   //check camera count
   if (camera_count < 1)
@@ -413,6 +415,7 @@ void LIVMapper::initializeComponents(rclcpp::Node::SharedPtr &node)
     manager->patch_pyrimid_level = patch_pyrimid_level;
     manager->exposure_estimate_en = exposure_estimate_en;
     manager->colmap_output_en = colmap_output_en;
+    manager->img_pub_en = img_pub_en;
     manager->initializeVIO();
 
     RCLCPP_INFO(
@@ -524,10 +527,13 @@ void LIVMapper::initializeSubscribersAndPublishers(rclcpp::Node::SharedPtr &node
   pubLaserCloudDynDbg = this->node->create_publisher<sensor_msgs::msg::PointCloud2>("/dyn_obj_dbg_hist", 100);
   mavros_pose_publisher = this->node->create_publisher<geometry_msgs::msg::PoseStamped>("/mavros/vision_pose/pose", 10);
   pubImage.clear();
-  pubImage.reserve(camera_count);
-  for (int i = 0; i < camera_count; ++i)
+  if (img_pub_en)
   {
-    pubImage.push_back(it.advertise("/rgb_img_" + std::to_string(i + 1), 1));
+    pubImage.reserve(camera_count);
+    for (int i = 0; i < camera_count; ++i)
+    {
+      pubImage.push_back(it.advertise("/rgb_img_" + std::to_string(i + 1), 1));
+    }
   }
   pubImuPropOdom = this->node->create_publisher<nav_msgs::msg::Odometry>("/LIVO2/imu_propagate", 10000);
   imu_prop_timer = this->node->create_wall_timer(0.004s, std::bind(&LIVMapper::imu_prop_callback, this));
@@ -1720,6 +1726,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
 
 void LIVMapper::publish_img_rgb(int cam_idx, VIOManagerPtr vio_manager)
 {
+  if (!img_pub_en) return;
   if (cam_idx < 0 || cam_idx >= static_cast<int>(pubImage.size()))
   {
     RCLCPP_ERROR(this->node->get_logger(), "[rgb_img] invalid cam_idx=%d", cam_idx);
